@@ -5,6 +5,7 @@ import attendanceRoutes from "../modules/attendance/attendance.routes.js";
 import salaryAdvanceRoutes from "../modules/salary-advances/salary-advance.routes.js";
 import loanRoutes from "../modules/loans/loan.routes.js";
 import documentRoutes from "../modules/documents/document.routes.js";
+import employeeRoutes from "../modules/employees/employee.routes.js";
 import type { AppEnv } from "../modules/auth/auth.types.js";
 
 const apiRoutes = new Hono<AppEnv>();
@@ -15,5 +16,6 @@ apiRoutes.route("/attendance", attendanceRoutes);
 apiRoutes.route("/salary-advances", salaryAdvanceRoutes);
 apiRoutes.route("/loans", loanRoutes);
 apiRoutes.route("/documents", documentRoutes);
+apiRoutes.route("/employees", employeeRoutes);
 
 export default apiRoutes;
