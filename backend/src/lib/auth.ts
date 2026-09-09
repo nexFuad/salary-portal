@@ -9,6 +9,17 @@ export const refreshCookieName = "salary_portal_refresh_token";
 export const accessTokenLifetimeInSeconds = 60 * 15;
 export const refreshTokenLifetimeInSeconds = 60 * 60 * 24 * 30;
 
+function authCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    sameSite: isProduction ? ("None" as const) : ("Lax" as const),
+    secure: isProduction,
+    path: "/",
+  };
+}
+
 export async function createAccessToken(user: User) {
   const secret = process.env.AUTH_JWT_SECRET;
   if (!secret) throw new Error("AUTH_JWT_SECRET is required");
@@ -32,10 +43,7 @@ export async function setAuthCookies(
 ) {
   const accessToken = await createAccessToken(user);
   const options = {
-    httpOnly: true,
-    sameSite: "Lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
+    ...authCookieOptions(),
     ...(persistent ? { maxAge: refreshTokenLifetimeInSeconds } : {}),
   };
 
@@ -44,10 +52,7 @@ export async function setAuthCookies(
 }
 
 export function clearAuthCookies(c: Context<AppEnv>) {
-  const options = {
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-  };
+  const options = authCookieOptions();
 
   deleteCookie(c, accessCookieName, options);
   deleteCookie(c, refreshCookieName, options);
