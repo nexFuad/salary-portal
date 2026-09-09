@@ -58,6 +58,7 @@ model User {
   salaryType            String?
   allowances            Decimal?               @db.Decimal(12, 2)
   attendanceBonusThreshold Decimal?            @db.Decimal(5, 2)
+  attendanceBonusRate   Decimal?               @default(5) @db.Decimal(5, 2)
   effectiveSalaryDate   DateTime?
   address               String?
   city                  String?
@@ -89,6 +90,12 @@ model PayrollRecord {
   attendedDays     Int
   basicSalary      Decimal  @db.Decimal(12, 2)
   bonusAmount      Decimal  @default(0) @db.Decimal(12, 2)
+  expectedWorkHours Decimal @default(0) @db.Decimal(8, 2)
+  workedHours      Decimal  @default(0) @db.Decimal(8, 2)
+  overtimeHours    Decimal  @default(0) @db.Decimal(8, 2)
+  shortHours       Decimal  @default(0) @db.Decimal(8, 2)
+  overtimeAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  deductionAmount  Decimal  @default(0) @db.Decimal(12, 2)
   netSalary        Decimal  @db.Decimal(12, 2)
   status           String   @default("Pending approval")
   createdAt        DateTime @default(now())
@@ -126,7 +133,11 @@ model LoanRequest {
   purpose            String
   repaymentMonths    Int
   installments       Int
+  monthlyInstallment Decimal       @default(0) @db.Decimal(12, 2)
+  paidAmount         Decimal       @default(0) @db.Decimal(12, 2)
+  remainingAmount    Decimal       @default(0) @db.Decimal(12, 2)
   preferredStartDate DateTime
+  repaymentEndDate   DateTime?
   note               String?
   requestDate        DateTime      @default(now())
   status             RequestStatus @default(PENDING)
@@ -162,6 +173,8 @@ model UserDocument {
 model AttendanceRecord {
   id               String    @id @default(cuid())
   workDate         DateTime
+  shiftStartTime   String    @default("09:00")
+  shiftEndTime     String    @default("15:00")
   checkInAt        DateTime
   checkInPhotoUrl  String
   checkOutAt       DateTime?

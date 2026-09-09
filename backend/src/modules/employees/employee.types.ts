@@ -23,6 +23,7 @@ export type EmployeeInput = {
   salaryType?: string;
   allowances?: string | number;
   attendanceBonusThreshold?: string | number;
+  attendanceBonusRate?: string | number;
   effectiveSalaryDate?: string;
   address?: string;
   city?: string;

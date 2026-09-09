@@ -8,17 +8,35 @@ import {
   listAttendance,
 } from "./attendance.service.js";
 
-function readPhotoUrl(value: unknown) {
+function readAttendanceInput(value: unknown) {
   if (
     !value ||
     typeof value !== "object" ||
-    typeof (value as Record<string, unknown>).photoUrl !== "string"
+    typeof (value as Record<string, unknown>).photoUrl !== "string" ||
+    typeof (value as Record<string, unknown>).shiftStartTime !== "string" ||
+    typeof (value as Record<string, unknown>).shiftEndTime !== "string" ||
+    typeof (value as Record<string, unknown>).attendanceTime !== "string"
   )
     return null;
-  const photoUrl = (value as Record<string, string>).photoUrl.trim();
+  const input = value as Record<string, string>;
+  const photoUrl = input.photoUrl.trim();
+  const isTime = (time: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   try {
     const url = new URL(photoUrl);
-    return url.protocol === "https:" ? photoUrl : null;
+    if (
+      url.protocol !== "https:" ||
+      !isTime(input.shiftStartTime) ||
+      !isTime(input.shiftEndTime) ||
+      !isTime(input.attendanceTime) ||
+      input.shiftEndTime <= input.shiftStartTime
+    )
+      return null;
+    return {
+      photoUrl,
+      shiftStartTime: input.shiftStartTime,
+      shiftEndTime: input.shiftEndTime,
+      attendanceTime: input.attendanceTime,
+    };
   } catch {
     return null;
   }
@@ -35,23 +53,38 @@ export async function list(c: Context<AppEnv>) {
 }
 
 export async function checkInForToday(c: Context<AppEnv>) {
-  const photoUrl = readPhotoUrl(await c.req.json().catch(() => null));
-  if (!photoUrl)
-    return c.json({ message: "A valid check-in photo is required" }, 400);
+  const input = readAttendanceInput(await c.req.json().catch(() => null));
+  if (!input)
+    return c.json(
+      { message: "A valid photo, shift, and check-in time are required" },
+      400,
+    );
 
-  const attendance = await checkIn(c.get("authUser").sub, photoUrl);
+  const attendance = await checkIn(
+    c.get("authUser").sub,
+    input.photoUrl,
+    input.shiftStartTime,
+    input.shiftEndTime,
+    input.attendanceTime,
+  );
   return c.json({ attendance }, 201);
 }
 
 export async function checkOutForToday(c: Context<AppEnv>) {
-  const photoUrl = readPhotoUrl(await c.req.json().catch(() => null));
-  if (!photoUrl)
-    return c.json({ message: "A valid check-out photo is required" }, 400);
+  const input = readAttendanceInput(await c.req.json().catch(() => null));
+  if (!input)
+    return c.json(
+      { message: "A valid photo, shift, and check-out time are required" },
+      400,
+    );
 
   const attendance = await checkOut(
     c.req.param("id")!,
     c.get("authUser").sub,
-    photoUrl,
+    input.photoUrl,
+    input.shiftStartTime,
+    input.shiftEndTime,
+    input.attendanceTime,
   );
   if (!attendance)
     return c.json(

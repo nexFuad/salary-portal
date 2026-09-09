@@ -2,6 +2,8 @@ import { prisma } from "../../lib/prisma.js";
 const attendanceSelect = {
     id: true,
     workDate: true,
+    shiftStartTime: true,
+    shiftEndTime: true,
     checkInAt: true,
     checkInPhotoUrl: true,
     checkOutAt: true,
@@ -13,6 +15,12 @@ const attendanceSelect = {
 function startOfToday() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+function todayAt(time) {
+    const [hours, minutes] = time.split(":").map(Number);
+    const value = startOfToday();
+    value.setHours(hours, minutes, 0, 0);
+    return value;
 }
 export async function getCurrentAttendance(userId) {
     return prisma.attendanceRecord.findFirst({
@@ -28,14 +36,21 @@ export async function listAttendance(userId) {
         orderBy: { workDate: "desc" },
     });
 }
-export async function checkIn(userId, checkInPhotoUrl) {
+export async function checkIn(userId, checkInPhotoUrl, shiftStartTime, shiftEndTime, checkInTime) {
     const workDate = startOfToday();
     return prisma.attendanceRecord.create({
-        data: { userId, workDate, checkInAt: new Date(), checkInPhotoUrl },
+        data: {
+            userId,
+            workDate,
+            shiftStartTime,
+            shiftEndTime,
+            checkInAt: todayAt(checkInTime),
+            checkInPhotoUrl,
+        },
         select: attendanceSelect,
     });
 }
-export async function checkOut(id, userId, checkOutPhotoUrl) {
+export async function checkOut(id, userId, checkOutPhotoUrl, shiftStartTime, shiftEndTime, checkOutTime) {
     const record = await prisma.attendanceRecord.findFirst({
         where: { id, userId, checkOutAt: null },
         select: { id: true },
@@ -44,7 +59,12 @@ export async function checkOut(id, userId, checkOutPhotoUrl) {
         return null;
     return prisma.attendanceRecord.update({
         where: { id },
-        data: { checkOutAt: new Date(), checkOutPhotoUrl },
+        data: {
+            shiftStartTime,
+            shiftEndTime,
+            checkOutAt: todayAt(checkOutTime),
+            checkOutPhotoUrl,
+        },
         select: attendanceSelect,
     });
 }

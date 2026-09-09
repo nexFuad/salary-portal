@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { RequestStatus, LeaveRequestStatus, DocumentStatus, } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.middleware.js";
+import { refreshLoanRepaymentProgress } from "../loans/loan.service.js";
+import { getOfficerDashboard } from "../officer-dashboard/officer-dashboard.service.js";
 const routes = new Hono();
 routes.use("*", requireAuth, requireRole("OFFICER"));
 const company = (c) => c.get("authUser").company;
@@ -15,6 +17,7 @@ const user = {
         workEndTime: true,
     },
 };
+routes.get("/dashboard", async (c) => c.json({ dashboard: await getOfficerDashboard(c.get("authUser").company) }));
 routes.get("/leave", async (c) => c.json({
     requests: await prisma.leaveRequest.findMany({
         include: { user },
@@ -27,12 +30,15 @@ routes.get("/salary-advances", async (c) => c.json({
         orderBy: { createdAt: "desc" },
     }),
 }));
-routes.get("/loans", async (c) => c.json({
-    requests: await prisma.loanRequest.findMany({
-        include: { user },
-        orderBy: { createdAt: "desc" },
-    }),
-}));
+routes.get("/loans", async (c) => {
+    await refreshLoanRepaymentProgress();
+    return c.json({
+        requests: await prisma.loanRequest.findMany({
+            include: { user },
+            orderBy: { createdAt: "desc" },
+        }),
+    });
+});
 routes.get("/attendance", async (c) => c.json({
     records: await prisma.attendanceRecord.findMany({
         include: { user },

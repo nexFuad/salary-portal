@@ -1,6 +1,8 @@
 export type AttendanceResponse = {
   id: string;
   workDate: Date;
+  shiftStartTime: string;
+  shiftEndTime: string;
   checkInAt: Date;
   checkInPhotoUrl: string;
   checkOutAt: Date | null;
@@ -16,4 +18,7 @@ export type AttendanceResponse = {
 
 export type AttendancePhotoInput = {
   photoUrl: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  attendanceTime: string;
 };

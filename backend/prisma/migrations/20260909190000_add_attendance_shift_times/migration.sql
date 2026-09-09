@@ -1,0 +1,3 @@
+ALTER TABLE "AttendanceRecord"
+ADD COLUMN "shiftStartTime" TEXT NOT NULL DEFAULT '09:00',
+ADD COLUMN "shiftEndTime" TEXT NOT NULL DEFAULT '15:00';
