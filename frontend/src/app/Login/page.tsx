@@ -2,13 +2,14 @@
 
 import axios from "axios";
 import Link from "next/link";
-import { Suspense, useState, type FormEvent } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/Hooks/useAuth";
 import { dashboardPathByRole } from "@/Types/auth";
 
 function LoginForm() {
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("");
   const [company, setCompany] = useState("");
@@ -17,6 +18,12 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const logoutMessage = searchParams.get("loggedOut") === "1";
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(dashboardPathByRole[user.role]);
+    }
+  }, [isLoading, router, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
