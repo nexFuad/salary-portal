@@ -5,6 +5,7 @@ function isDate(value) {
     return typeof value === "string" && !Number.isNaN(new Date(value).getTime());
 }
 function hasValidOptionalFields(input) {
+    const isTime = (value) => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
     return ((input.dateOfBirth === undefined ||
         input.dateOfBirth === "" ||
         isDate(input.dateOfBirth)) &&
@@ -17,9 +18,24 @@ function hasValidOptionalFields(input) {
         (input.basicSalary === undefined ||
             input.basicSalary === "" ||
             Number(input.basicSalary) >= 0) &&
+        (input.workDaysPerWeek === undefined ||
+            input.workDaysPerWeek === "" ||
+            (Number.isInteger(Number(input.workDaysPerWeek)) &&
+                Number(input.workDaysPerWeek) >= 1 &&
+                Number(input.workDaysPerWeek) <= 7)) &&
+        (input.workStartTime === undefined ||
+            input.workStartTime === "" ||
+            isTime(input.workStartTime)) &&
+        (input.workEndTime === undefined ||
+            input.workEndTime === "" ||
+            isTime(input.workEndTime)) &&
         (input.allowances === undefined ||
             input.allowances === "" ||
-            Number(input.allowances) >= 0));
+            Number(input.allowances) >= 0) &&
+        (input.attendanceBonusThreshold === undefined ||
+            input.attendanceBonusThreshold === "" ||
+            (Number(input.attendanceBonusThreshold) >= 0 &&
+                Number(input.attendanceBonusThreshold) <= 100)));
 }
 function validate(body, isCreate) {
     if (!body || typeof body !== "object")
