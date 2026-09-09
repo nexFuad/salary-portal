@@ -6,6 +6,8 @@ import salaryAdvanceRoutes from "../modules/salary-advances/salary-advance.route
 import loanRoutes from "../modules/loans/loan.routes.js";
 import documentRoutes from "../modules/documents/document.routes.js";
 import employeeRoutes from "../modules/employees/employee.routes.js";
+import payrollRoutes from "../modules/payroll/payroll.routes.js";
+import officerRequestRoutes from "../modules/officer-requests/officer-request.routes.js";
 const apiRoutes = new Hono();
 apiRoutes.route("/auth", authRoutes);
 apiRoutes.route("/leave-requests", leaveRequestRoutes);
@@ -14,4 +16,6 @@ apiRoutes.route("/salary-advances", salaryAdvanceRoutes);
 apiRoutes.route("/loans", loanRoutes);
 apiRoutes.route("/documents", documentRoutes);
 apiRoutes.route("/employees", employeeRoutes);
+apiRoutes.route("/payroll", payrollRoutes);
+apiRoutes.route("/officer-requests", officerRequestRoutes);
 export default apiRoutes;

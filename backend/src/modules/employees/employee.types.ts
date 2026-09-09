@@ -14,11 +14,15 @@ export type EmployeeInput = {
   department?: string;
   designation?: string;
   employmentType?: string;
+  workDaysPerWeek?: string | number;
+  workStartTime?: string;
+  workEndTime?: string;
   joinDate?: string;
   employmentStatus?: string;
   basicSalary?: string | number;
   salaryType?: string;
   allowances?: string | number;
+  attendanceBonusThreshold?: string | number;
   effectiveSalaryDate?: string;
   address?: string;
   city?: string;

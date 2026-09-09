@@ -18,6 +18,8 @@ function isDate(value: unknown) {
 }
 
 function hasValidOptionalFields(input: Record<string, unknown>) {
+  const isTime = (value: unknown) =>
+    typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   return (
     (input.dateOfBirth === undefined ||
       input.dateOfBirth === "" ||
@@ -31,9 +33,24 @@ function hasValidOptionalFields(input: Record<string, unknown>) {
     (input.basicSalary === undefined ||
       input.basicSalary === "" ||
       Number(input.basicSalary) >= 0) &&
+    (input.workDaysPerWeek === undefined ||
+      input.workDaysPerWeek === "" ||
+      (Number.isInteger(Number(input.workDaysPerWeek)) &&
+        Number(input.workDaysPerWeek) >= 1 &&
+        Number(input.workDaysPerWeek) <= 7)) &&
+    (input.workStartTime === undefined ||
+      input.workStartTime === "" ||
+      isTime(input.workStartTime)) &&
+    (input.workEndTime === undefined ||
+      input.workEndTime === "" ||
+      isTime(input.workEndTime)) &&
     (input.allowances === undefined ||
       input.allowances === "" ||
-      Number(input.allowances) >= 0)
+      Number(input.allowances) >= 0) &&
+    (input.attendanceBonusThreshold === undefined ||
+      input.attendanceBonusThreshold === "" ||
+      (Number(input.attendanceBonusThreshold) >= 0 &&
+        Number(input.attendanceBonusThreshold) <= 100))
   );
 }
 
@@ -140,7 +157,10 @@ export async function updateAccountStatus(c: Context<AppEnv>) {
     );
   }
   if (c.req.param("id") === c.get("authUser").sub) {
-    return c.json({ message: "You cannot change your own account status." }, 400);
+    return c.json(
+      { message: "You cannot change your own account status." },
+      400,
+    );
   }
   const employee = await setEmployeeAccountStatus(
     c.req.param("id")!,
