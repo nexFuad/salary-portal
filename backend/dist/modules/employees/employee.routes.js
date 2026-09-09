@@ -1,0 +1,12 @@
+import { Hono } from "hono";
+import { requireAuth, requireRole } from "../../middleware/auth.middleware.js";
+import { create, getById, list, remove, update, updateAccountStatus, } from "./employee.controller.js";
+const employeeRoutes = new Hono();
+employeeRoutes.use("*", requireAuth, requireRole("OFFICER"));
+employeeRoutes.get("/list", list);
+employeeRoutes.get("/:id", getById);
+employeeRoutes.post("/create", create);
+employeeRoutes.patch("/:id", update);
+employeeRoutes.patch("/:id/account-status", updateAccountStatus);
+employeeRoutes.delete("/:id", remove);
+export default employeeRoutes;
