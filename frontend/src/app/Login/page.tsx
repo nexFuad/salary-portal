@@ -2,12 +2,12 @@
 
 import axios from "axios";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/Hooks/useAuth";
 import { dashboardPathByRole } from "@/Types/auth";
 
-export default function LoginPage() {
+function LoginForm() {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("");
@@ -163,5 +163,13 @@ export default function LoginPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
