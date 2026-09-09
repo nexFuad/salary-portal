@@ -1,0 +1,12 @@
+import { Hono } from "hono";
+import { requireAuth, requireRole } from "../../middleware/auth.middleware.js";
+import { checkInForToday, checkOutForToday, current, list, remove, } from "./attendance.controller.js";
+const attendanceRoutes = new Hono();
+attendanceRoutes.use("*", requireAuth, requireRole("OM"));
+attendanceRoutes.get("/current", current);
+attendanceRoutes.get("/", list);
+attendanceRoutes.get("/list", list);
+attendanceRoutes.post("/check-in", checkInForToday);
+attendanceRoutes.post("/:id/check-out", checkOutForToday);
+attendanceRoutes.delete("/:id", remove);
+export default attendanceRoutes;

@@ -1,0 +1,15 @@
+import { Hono } from "hono";
+import authRoutes from "../modules/auth/auth.routes.js";
+import leaveRequestRoutes from "../modules/leave-requests/leave-request.routes.js";
+import attendanceRoutes from "../modules/attendance/attendance.routes.js";
+import salaryAdvanceRoutes from "../modules/salary-advances/salary-advance.routes.js";
+import loanRoutes from "../modules/loans/loan.routes.js";
+import documentRoutes from "../modules/documents/document.routes.js";
+const apiRoutes = new Hono();
+apiRoutes.route("/auth", authRoutes);
+apiRoutes.route("/leave-requests", leaveRequestRoutes);
+apiRoutes.route("/attendance", attendanceRoutes);
+apiRoutes.route("/salary-advances", salaryAdvanceRoutes);
+apiRoutes.route("/loans", loanRoutes);
+apiRoutes.route("/documents", documentRoutes);
+export default apiRoutes;

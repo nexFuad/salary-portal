@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OFFICER
+  OM
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  ACTIVE
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  phone                 String?
+  profilePic            String?
+  employeeId            String
+  company               String
+  passwordHash          String
+  role                  UserRole
+  lastLogin             DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  refreshSessions       RefreshSession[]
+  leaveRequests         LeaveRequest[]
+  attendanceRecords     AttendanceRecord[]
+  salaryAdvanceRequests SalaryAdvanceRequest[]
+  loanRequests          LoanRequest[]
+  documents             UserDocument[]
+
+  @@unique([employeeId, company])
+}
+
+model SalaryAdvanceRequest {
+  id              String        @id @default(cuid())
+  requestedAmount Decimal       @db.Decimal(12, 2)
+  reason          String
+  repaymentMonths Int
+  note            String?
+  requestDate     DateTime      @default(now())
+  status          RequestStatus @default(PENDING)
+  approvedAmount  Decimal?      @db.Decimal(12, 2)
+  adminNote       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model LoanRequest {
+  id                 String        @id @default(cuid())
+  loanType           String
+  requestedAmount    Decimal       @db.Decimal(12, 2)
+  purpose            String
+  repaymentMonths    Int
+  installments       Int
+  preferredStartDate DateTime
+  note               String?
+  requestDate        DateTime      @default(now())
+  status             RequestStatus @default(PENDING)
+  approvedAmount     Decimal?      @db.Decimal(12, 2)
+  adminNote          String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  userId             String
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model UserDocument {
+  id           String         @id @default(cuid())
+  title        String
+  documentType String
+  description  String?
+  fileUrl      String
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  status       DocumentStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AttendanceRecord {
+  id               String    @id @default(cuid())
+  workDate         DateTime
+  checkInAt        DateTime
+  checkInPhotoUrl  String
+  checkOutAt       DateTime?
+  checkOutPhotoUrl String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, workDate])
+}
+
+model LeaveRequest {
+  id        String             @id @default(cuid())
+  leaveType String
+  reason    String
+  note      String?
+  startDate DateTime
+  endDate   DateTime
+  status    LeaveRequestStatus @default(PENDING)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model RefreshSession {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  persistent Boolean  @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
