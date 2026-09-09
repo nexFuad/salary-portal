@@ -4,6 +4,15 @@ export const accessCookieName = "salary_portal_token";
 export const refreshCookieName = "salary_portal_refresh_token";
 export const accessTokenLifetimeInSeconds = 60 * 15;
 export const refreshTokenLifetimeInSeconds = 60 * 60 * 24 * 30;
+function authCookieOptions() {
+    const isProduction = process.env.NODE_ENV === "production";
+    return {
+        httpOnly: true,
+        sameSite: isProduction ? "None" : "Lax",
+        secure: isProduction,
+        path: "/",
+    };
+}
 export async function createAccessToken(user) {
     const secret = process.env.AUTH_JWT_SECRET;
     if (!secret)
@@ -20,20 +29,14 @@ export async function createAccessToken(user) {
 export async function setAuthCookies(c, user, refreshToken, persistent) {
     const accessToken = await createAccessToken(user);
     const options = {
-        httpOnly: true,
-        sameSite: "Lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
+        ...authCookieOptions(),
         ...(persistent ? { maxAge: refreshTokenLifetimeInSeconds } : {}),
     };
     setCookie(c, accessCookieName, accessToken, options);
     setCookie(c, refreshCookieName, refreshToken, options);
 }
 export function clearAuthCookies(c) {
-    const options = {
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-    };
+    const options = authCookieOptions();
     deleteCookie(c, accessCookieName, options);
     deleteCookie(c, refreshCookieName, options);
 }
