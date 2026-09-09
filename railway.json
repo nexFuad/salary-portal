@@ -3,10 +3,11 @@
   "build": {
     "builder": "RAILPACK",
     "buildCommand": "cd backend && pnpm install --frozen-lockfile && pnpm prisma generate && pnpm build",
-    "watchPatterns": ["backend/**"]
+    "watchPatterns": ["backend/**", "railway.json"]
   },
   "deploy": {
     "startCommand": "cd backend && node dist/index.js",
+    "preDeployCommand": ["cd backend && pnpm prisma migrate deploy"],
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
