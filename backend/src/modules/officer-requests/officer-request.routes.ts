@@ -7,6 +7,8 @@ import {
 import { prisma } from "../../lib/prisma.js";
 import { requireAuth, requireRole } from "../../middleware/auth.middleware.js";
 import type { AppEnv } from "../auth/auth.types.js";
+import { refreshLoanRepaymentProgress } from "../loans/loan.service.js";
+import { getOfficerDashboard } from "../officer-dashboard/officer-dashboard.service.js";
 
 const routes = new Hono<AppEnv>();
 routes.use("*", requireAuth, requireRole("OFFICER"));
@@ -21,6 +23,9 @@ const user = {
     workEndTime: true,
   },
 };
+routes.get("/dashboard", async (c) =>
+  c.json({ dashboard: await getOfficerDashboard(c.get("authUser").company) }),
+);
 routes.get("/leave", async (c) =>
   c.json({
     requests: await prisma.leaveRequest.findMany({
@@ -37,14 +42,15 @@ routes.get("/salary-advances", async (c) =>
     }),
   }),
 );
-routes.get("/loans", async (c) =>
-  c.json({
+routes.get("/loans", async (c) => {
+  await refreshLoanRepaymentProgress();
+  return c.json({
     requests: await prisma.loanRequest.findMany({
       include: { user },
       orderBy: { createdAt: "desc" },
     }),
-  }),
-);
+  });
+});
 routes.get("/attendance", async (c) =>
   c.json({
     records: await prisma.attendanceRecord.findMany({

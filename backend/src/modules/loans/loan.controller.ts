@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { RequestStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import type { AppEnv } from "../auth/auth.types.js";
+import { refreshLoanRepaymentProgress } from "./loan.service.js";
 const loanTypes = [
   "Personal Loan",
   "Emergency Loan",
@@ -10,30 +11,47 @@ const loanTypes = [
 ];
 const valid = (v: unknown) => {
   const x = v as Record<string, unknown>;
+  const requestedAmount = Number(x?.requestedAmount);
+  const monthlyInstallment = Number(x?.monthlyInstallment);
+  const repaymentMonths = Math.ceil(requestedAmount / monthlyInstallment);
+
   return (
     x &&
     loanTypes.includes(String(x.loanType)) &&
-    Number(x.requestedAmount) > 0 &&
+    Number.isFinite(requestedAmount) &&
+    requestedAmount > 0 &&
     typeof x.purpose === "string" &&
     x.purpose.trim() &&
-    Number.isInteger(Number(x.repaymentMonths)) &&
-    Number(x.repaymentMonths) > 0 &&
-    Number(x.repaymentMonths) <= 60 &&
-    Number.isInteger(Number(x.installments)) &&
-    Number(x.installments) > 0 &&
+    Number.isFinite(monthlyInstallment) &&
+    monthlyInstallment > 0 &&
+    repaymentMonths > 0 &&
+    repaymentMonths <= 60 &&
     typeof x.preferredStartDate === "string" &&
     !Number.isNaN(new Date(x.preferredStartDate).getTime())
   );
 };
 
 function requestData(body: Record<string, unknown>) {
+  const requestedAmount = Number(body.requestedAmount);
+  const monthlyInstallment = Number(body.monthlyInstallment);
+  const repaymentMonths = Math.ceil(requestedAmount / monthlyInstallment);
+  const preferredStartDate = new Date(String(body.preferredStartDate));
+  const repaymentEndDate = new Date(preferredStartDate);
+  repaymentEndDate.setUTCMonth(
+    repaymentEndDate.getUTCMonth() + repaymentMonths - 1,
+  );
+
   return {
     loanType: String(body.loanType),
-    requestedAmount: String(body.requestedAmount),
+    requestedAmount: String(requestedAmount),
     purpose: String(body.purpose).trim(),
-    repaymentMonths: Number(body.repaymentMonths),
-    installments: Number(body.installments),
-    preferredStartDate: new Date(String(body.preferredStartDate)),
+    repaymentMonths,
+    installments: repaymentMonths,
+    monthlyInstallment: String(monthlyInstallment),
+    paidAmount: "0",
+    remainingAmount: String(requestedAmount),
+    preferredStartDate,
+    repaymentEndDate,
     note: typeof body.note === "string" ? body.note.trim() || null : null,
     requestDate:
       typeof body.requestDate === "string" &&
@@ -43,6 +61,7 @@ function requestData(body: Record<string, unknown>) {
   };
 }
 export async function getLoans(c: Context<AppEnv>) {
+  await refreshLoanRepaymentProgress(c.get("authUser").sub);
   const requests = await prisma.loanRequest.findMany({
     where: { userId: c.get("authUser").sub },
     orderBy: { createdAt: "desc" },
@@ -50,6 +69,7 @@ export async function getLoans(c: Context<AppEnv>) {
   return c.json({ requests });
 }
 export async function getLoan(c: Context<AppEnv>) {
+  await refreshLoanRepaymentProgress(c.get("authUser").sub);
   const request = await prisma.loanRequest.findFirst({
     where: { id: c.req.param("id")!, userId: c.get("authUser").sub },
   });

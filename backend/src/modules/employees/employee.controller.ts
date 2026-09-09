@@ -50,7 +50,11 @@ function hasValidOptionalFields(input: Record<string, unknown>) {
     (input.attendanceBonusThreshold === undefined ||
       input.attendanceBonusThreshold === "" ||
       (Number(input.attendanceBonusThreshold) >= 0 &&
-        Number(input.attendanceBonusThreshold) <= 100))
+        Number(input.attendanceBonusThreshold) <= 100)) &&
+    (input.attendanceBonusRate === undefined ||
+      input.attendanceBonusRate === "" ||
+      (Number(input.attendanceBonusRate) >= 0 &&
+        Number(input.attendanceBonusRate) <= 100))
   );
 }
 
