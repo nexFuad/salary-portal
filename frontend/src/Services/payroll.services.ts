@@ -6,13 +6,17 @@ const api = axios.create({
   withCredentials: true,
 });
 export const payrollService = {
-  list: async () =>
-    (await api.get<{ records: PayrollRecord[] }>("/list")).data.records,
-  generate: async () =>
+  list: async (payRunMonth?: string) =>
+    (
+      await api.get<{ records: PayrollRecord[] }>("/list", {
+        params: payRunMonth ? { payRunMonth } : undefined,
+      })
+    ).data.records,
+  generate: async (payRunMonth?: string) =>
     (
       await api.post<{ records: PayrollRecord[]; message: string }>(
         "/generate",
-        {},
+        payRunMonth ? { payRunMonth } : {},
       )
     ).data,
   updateStatus: async (id: string, status: string) =>

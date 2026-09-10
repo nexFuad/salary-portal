@@ -2,8 +2,6 @@ import axios from "axios";
 import { apiBaseUrl } from "@/Services/api-base-url";
 import type {
   OfficerAttendanceRecord,
-  OfficerDocument,
-  OfficerDocumentInput,
   OfficerLeaveRequest,
   OfficerLoan,
   OfficerSalaryAdvance,
@@ -26,13 +24,6 @@ export const officerRequestsService = {
   attendance: async (): Promise<OfficerAttendanceRecord[]> =>
     (await api.get("/attendance")).data.records,
   deleteAttendance: async (id: string) => api.delete(`/attendance/${id}`),
-  documents: async (): Promise<OfficerDocument[]> =>
-    (await api.get("/documents")).data.documents,
-  createDocument: async (data: OfficerDocumentInput) =>
-    (await api.post("/documents", data)).data.document,
-  deleteDocument: async (id: string) => api.delete(`/documents/${id}`),
-  setDocumentStatus: async (id: string, status: "APPROVED" | "REJECTED") =>
-    api.patch(`/documents/${id}/status`, { status }),
   setLeave: async (id: string, status: "APPROVED" | "REJECTED") =>
     api.patch(`/leave/${id}/status`, { status }),
   setSalaryAdvance: async (id: string, status: "APPROVED" | "REJECTED") =>

@@ -312,6 +312,7 @@ export default function NewEmployeePage({
                 value={form.password}
                 onChange={(e) => update("password", e.target.value)}
                 className={textInput}
+                placeholder="Enter a secure password"
               />
             </Field>
             <Field label="Confirm password" required={!isEditing}>
@@ -322,6 +323,7 @@ export default function NewEmployeePage({
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className={textInput}
+                placeholder="Re-enter the password"
               />
             </Field>
           </FormSection>
@@ -523,6 +525,7 @@ export default function NewEmployeePage({
                 value={form.country}
                 onChange={(e) => update("country", e.target.value)}
                 className={textInput}
+                placeholder="e.g. Bangladesh"
               />
             </Field>
             <Field label="Emergency contact phone">
@@ -532,6 +535,7 @@ export default function NewEmployeePage({
                   update("emergencyContactPhone", e.target.value)
                 }
                 className={textInput}
+                placeholder="e.g. +880 1700 000000"
               />
             </Field>
           </FormSection>

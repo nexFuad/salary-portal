@@ -19,9 +19,8 @@ import Modal from "@/Components/Shared/Modal";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import Pagination from "@/Components/Shared/Pagination";
 import { useSearchBar } from "@/Hooks/useSearchBar";
-import { officerRequestsService } from "@/Services/officer-requests.services";
+import { officerDocumentService } from "@/Services/document.services";
 import type { OfficerDocument } from "@/Types/officer-requests";
-import { uploadDocument } from "@/Services/upload.services";
 import {
   RequestTableSkeleton,
   SimpleTable,
@@ -81,7 +80,7 @@ export default function DocumentsList() {
   });
   const documentsQuery = useQuery({
     queryKey: ["officer-documents"],
-    queryFn: officerRequestsService.documents,
+    queryFn: officerDocumentService.list,
   });
   const documents = documentsQuery.data ?? [];
   const { query, setQuery, filteredData } = useSearchBar({
@@ -97,14 +96,7 @@ export default function DocumentsList() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file.");
-      const fileUrl = await uploadDocument(file);
-      return officerRequestsService.createDocument({
-        ...form,
-        fileUrl,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-      });
+      return officerDocumentService.upload(form, file);
     },
     onSuccess: () => {
       setIsUploadOpen(false);
@@ -119,7 +111,7 @@ export default function DocumentsList() {
       ),
   });
   const deleteMutation = useMutation({
-    mutationFn: officerRequestsService.deleteDocument,
+    mutationFn: officerDocumentService.remove,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["officer-documents"] }),
   });
@@ -130,7 +122,7 @@ export default function DocumentsList() {
     }: {
       id: string;
       status: "APPROVED" | "REJECTED";
-    }) => officerRequestsService.setDocumentStatus(id, status),
+    }) => officerDocumentService.setStatus(id, status),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["officer-documents"] }),
   });
@@ -145,7 +137,7 @@ export default function DocumentsList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edec] bg-white px-4 py-4 sm:px-5">
-        <label className="flex h-10 min-w-[220px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+        <label className="flex h-10 min-w-55 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
           <Search size={16} className="text-slate-500" />
           <input
             value={query}

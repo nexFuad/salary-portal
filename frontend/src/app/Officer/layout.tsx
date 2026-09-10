@@ -1,30 +1,21 @@
 "use client";
 
 import {
-  Bell,
-  ChevronDown,
   CircleUserRound,
   EllipsisVertical,
   LayoutDashboard,
   LogOut,
   ReceiptText,
-  Search,
   UsersRound,
   X,
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/Hooks/useAuth";
-import { useSearchBar } from "@/Hooks/useSearchBar";
 
 type OfficerLayoutProps = { children: ReactNode };
-
-type DashboardSearchItem = {
-  id: string;
-  title: string;
-  category: "Employee" | "Payroll" | "Request";
-  description: string;
-};
 
 const navigationItems = [
   {
@@ -53,42 +44,9 @@ const navigationItems = [
   },
 ] as const;
 
-const dashboardSearchItems: DashboardSearchItem[] = [
-  {
-    id: "employee-ken",
-    title: "Ken Patel",
-    category: "Employee",
-    description: "People Ops · EMP-1000",
-  },
-  {
-    id: "employee-hana",
-    title: "Hana Rossi",
-    category: "Employee",
-    description: "Engineering · EMP-1001",
-  },
-  {
-    id: "payroll-september",
-    title: "September 2026 payroll",
-    category: "Payroll",
-    description: "$176,681 · Pending approval",
-  },
-  {
-    id: "request-leave",
-    title: "Pending leave requests",
-    category: "Request",
-    description: "4 requests awaiting review",
-  },
-  {
-    id: "request-advance",
-    title: "Salary advance requests",
-    category: "Request",
-    description: "3 requests awaiting review",
-  },
-];
-
 function BrandLogo() {
   return (
-    <a
+    <Link
       href="/Officer/dashboard"
       className="flex items-center gap-2.5"
       aria-label="SalaryFlow dashboard"
@@ -99,7 +57,7 @@ function BrandLogo() {
       <span className="text-[17px] font-bold tracking-[-0.04em] text-[#1f2a34]">
         SalaryFlow
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -108,12 +66,6 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
   const router = useRouter();
   const { logout, user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { query, setQuery, clearSearch, filteredData, hasQuery } = useSearchBar(
-    {
-      data: dashboardSearchItems,
-      searchFields: ["title", "category", "description"],
-    },
-  );
 
   async function handleLogout() {
     await logout();
@@ -181,7 +133,7 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
             }
 
             return (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 onClick={closeSidebar}
@@ -193,20 +145,20 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
               >
                 <Icon size={18} strokeWidth={1.8} />
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>
 
         <div className="mt-auto space-y-1 border-t border-[#edf0f0] p-4">
-          <a
+          <Link
             href="/Officer/my-accounts"
             onClick={closeSidebar}
             className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] font-semibold text-[#52606a] transition hover:bg-[#eff5f4] hover:text-[#1d625b]"
           >
             <CircleUserRound size={17} />
             My accounts
-          </a>
+          </Link>
           <button
             type="button"
             onClick={() => void handleLogout()}
@@ -225,68 +177,30 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
               <BrandLogo />
             </div>
 
-            <div className="relative hidden w-full max-w-[515px] lg:block">
-              <label className="flex h-11 items-center gap-3 rounded-lg border border-[#e0e6e5] bg-white px-4 text-[#929da6] shadow-sm">
-                <Search size={20} />
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search employees, payroll, requests..."
-                  className="w-full bg-transparent text-[15px] outline-none placeholder:text-[#9aa4ad]"
-                  aria-label="Search employees, payroll, and requests"
-                />
-              </label>
-
-              {hasQuery ? (
-                <div className="absolute left-0 top-[52px] z-50 w-full overflow-hidden rounded-lg border border-[#e0e6e5] bg-white py-1 shadow-lg">
-                  {filteredData.length ? (
-                    filteredData.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={clearSearch}
-                        className="block w-full px-4 py-3 text-left transition hover:bg-[#eff5f4]"
-                      >
-                        <span className="block text-sm font-semibold text-[#334049]">
-                          {item.title}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-[#7d8992]">
-                          {item.category} · {item.description}
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="px-4 py-3 text-sm text-[#7d8992]">
-                      No matching dashboard data found.
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="hidden items-center gap-5 lg:flex">
-              <button
-                type="button"
-                className="rounded-lg p-2 text-[#64717c] transition hover:bg-[#eff5f4] hover:text-[#1d625b]"
-                aria-label="Notifications"
-              >
-                <Bell size={21} strokeWidth={1.8} />
-              </button>
-              <div className="h-9 w-px bg-[#e8eded]" />
+            <div className="ml-auto hidden items-center lg:flex">
               <div className="flex items-center gap-2 text-left">
-                <span className="grid size-10 place-items-center rounded-full bg-[#1d625b] text-xs font-bold text-white">
-                  {initials}
-                </span>
+                {user?.profilePic ? (
+                  <Image
+                    src={user.profilePic}
+                    alt={`${displayName}'s profile`}
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="size-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="grid size-10 place-items-center rounded-full bg-[#1d625b] text-xs font-bold text-white">
+                    {initials}
+                  </span>
+                )}
                 <span className="leading-tight">
                   <span className="block text-sm font-bold text-[#26313a]">
                     {displayName}
                   </span>
                   <span className="block text-xs text-[#7a8790]">
-                    Officer / HR
+                    {user?.role ?? "Officer"}
                   </span>
                 </span>
-                <ChevronDown className="text-[#89939b]" size={16} />
               </div>
             </div>
 

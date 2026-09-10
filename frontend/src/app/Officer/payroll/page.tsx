@@ -7,6 +7,7 @@ import {
   Download,
   Eye,
   ListFilter,
+  LoaderCircle,
   Pencil,
   PlayCircle,
   Search,
@@ -24,6 +25,15 @@ import { payrollService } from "@/Services/payroll.services";
 import type { PayrollRecord } from "@/Types/payroll";
 
 const pageSize = 10;
+const currentMonth = new Date().toISOString().slice(0, 7);
+const defaultPayrollMonth = (() => {
+  const today = new Date();
+  return new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1),
+  )
+    .toISOString()
+    .slice(0, 7);
+})();
 const money = (value: string) =>
   `৳${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const dateMonth = (value: string) =>
@@ -42,18 +52,19 @@ export default function PayrollPage() {
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("All departments");
   const [status, setStatus] = useState("All statuses");
+  const [payrollMonth, setPayrollMonth] = useState(defaultPayrollMonth);
   const [page, setPage] = useState(1);
   const [details, setDetails] = useState<PayrollRecord | null>(null);
   const [editing, setEditing] = useState<PayrollRecord | null>(null);
   const [deleting, setDeleting] = useState<PayrollRecord | null>(null);
   const [message, setMessage] = useState("");
   const listQuery = useQuery({
-    queryKey: ["payroll"],
-    queryFn: payrollService.list,
+    queryKey: ["payroll", payrollMonth],
+    queryFn: () => payrollService.list(payrollMonth),
   });
   const records = useMemo(() => listQuery.data ?? [], [listQuery.data]);
   const generateMutation = useMutation({
-    mutationFn: payrollService.generate,
+    mutationFn: () => payrollService.generate(payrollMonth),
     onSuccess: async (result) => {
       setMessage(result.message);
       await queryClient.invalidateQueries({ queryKey: ["payroll"] });
@@ -77,22 +88,31 @@ export default function PayrollPage() {
     },
   });
 
+  const selectedMonthRecords = useMemo(
+    () =>
+      records.filter(
+        (record) => record.payRunMonth.slice(0, 7) === payrollMonth,
+      ),
+    [payrollMonth, records],
+  );
   const departments = useMemo(
     () =>
       [
         ...new Set(
-          records.map((record) => record.user.department).filter(Boolean),
+          selectedMonthRecords
+            .map((record) => record.user.department)
+            .filter(Boolean),
         ),
       ] as string[],
-    [records],
+    [selectedMonthRecords],
   );
   const statuses = useMemo(
-    () => [...new Set(records.map((record) => record.status))],
-    [records],
+    () => [...new Set(selectedMonthRecords.map((record) => record.status))],
+    [selectedMonthRecords],
   );
   const filteredRecords = useMemo(
     () =>
-      records.filter((record) => {
+      selectedMonthRecords.filter((record) => {
         const matchesSearch = [
           record.user.name,
           record.user.email,
@@ -109,7 +129,7 @@ export default function PayrollPage() {
           (status === "All statuses" || record.status === status)
         );
       }),
-    [records, query, department, status],
+    [selectedMonthRecords, query, department, status],
   );
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -276,7 +296,7 @@ export default function PayrollPage() {
             className="hidden shrink-0 text-[#71808a] sm:block"
             size={21}
           />
-          <label className="col-span-2 flex h-10 min-w-[210px] items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-[260px] lg:flex-1">
+          <label className="col-span-2 flex h-10 min-w-52.5 items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-65 lg:flex-1">
             <Search size={17} />
             <input
               value={query}
@@ -287,10 +307,22 @@ export default function PayrollPage() {
               className="w-full bg-transparent text-xs outline-none placeholder:text-[#98a3ab]"
             />
           </label>
+          <label className="flex h-10 items-center rounded-lg border border-[#e0e6e5] bg-white px-3 text-xs font-medium text-[#58646d] lg:w-40 lg:shrink-0">
+            <span className="sr-only">Payroll month</span>
+            <input
+              type="month"
+              value={payrollMonth}
+              max={currentMonth}
+              onChange={(event) =>
+                resetPage(() => setPayrollMonth(event.target.value || currentMonth))
+              }
+              className="w-full bg-transparent outline-none"
+            />
+          </label>
           <ShadcnSelect
             value={department}
             onValueChange={(value) => resetPage(() => setDepartment(value))}
-            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-[165px] lg:shrink-0"
+            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-41.25 lg:shrink-0"
             options={["All departments", ...departments].map((value) => ({
               label: value,
               value,
@@ -299,7 +331,7 @@ export default function PayrollPage() {
           <ShadcnSelect
             value={status}
             onValueChange={(value) => resetPage(() => setStatus(value))}
-            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-[145px] lg:shrink-0"
+            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-36.25 lg:shrink-0"
             options={["All statuses", ...statuses].map((value) => ({
               label: value,
               value,
@@ -320,9 +352,13 @@ export default function PayrollPage() {
               generateMutation.mutate();
             }}
             disabled={generateMutation.isPending}
-            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1d625b] px-3 text-xs font-semibold text-white disabled:opacity-60"
+            className="flex h-10 min-w-40 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1d625b] px-3 text-xs font-semibold text-white disabled:opacity-60"
           >
-            <PlayCircle size={16} />
+            {generateMutation.isPending ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <PlayCircle size={16} />
+            )}
             {generateMutation.isPending ? "Generating…" : "Generate payroll"}
           </button>
         </div>
@@ -343,7 +379,7 @@ export default function PayrollPage() {
               columns={columns}
               data={rows}
               getRowId={(record) => record.id}
-              emptyMessage="No payroll records found. Generate payroll to calculate the previous month's attendance."
+              emptyMessage={`No payroll records found for ${dateMonth(`${payrollMonth}-01`)}. Generate payroll to calculate that month's attendance.`}
             />
             <Pagination
               currentPage={safePage}

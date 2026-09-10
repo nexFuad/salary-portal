@@ -19,8 +19,7 @@ import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import { type TableColumn } from "@/Components/Shared/Table";
-import { documentService } from "@/Services/om.services";
-import { uploadDocument } from "@/Services/upload.services";
+import { documentService } from "@/Services/document.services";
 import type { UserDocument } from "@/Types/om";
 
 const documentTypes = [
@@ -58,20 +57,7 @@ export default function OmDocumentsPage() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a document to upload.");
-      if (
-        !["application/pdf", "image/jpeg", "image/png"].includes(file.type) ||
-        file.size > 10 * 1024 * 1024
-      )
-        throw new Error(
-          "Only PDF, JPG, and PNG files up to 10 MB are allowed.",
-        );
-      return documentService.create({
-        ...form,
-        fileUrl: await uploadDocument(file),
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-      });
+      return documentService.upload(form, file);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["documents"] });

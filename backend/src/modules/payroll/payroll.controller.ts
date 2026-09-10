@@ -4,7 +4,22 @@ import type { AppEnv } from "../auth/auth.types.js";
 
 const payrollStatus = ["Pending approval", "Approved", "Paid"] as const;
 
-function previousMonthRange() {
+function payrollMonthRange(payRunMonth?: unknown) {
+  if (typeof payRunMonth === "string") {
+    const match = /^(\d{4})-(\d{2})$/.exec(payRunMonth);
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    if (!Number.isInteger(year) || month < 1 || month > 12) return null;
+
+    const payRun = new Date(Date.UTC(year, month - 1, 1));
+    const start = new Date(payRun);
+    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    return { payRun, start, end };
+  }
+
+  // Preserve the original API behavior for callers that do not select a month.
   const now = new Date();
   const payRun = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
@@ -41,8 +56,31 @@ function round(value: number) {
 }
 
 export async function list(c: Context<AppEnv>) {
+  const payRunMonth = c.req.query("payRunMonth");
+  const range = payRunMonth ? payrollMonthRange(payRunMonth) : null;
+  if (payRunMonth && !range) {
+    return c.json(
+      { message: "Choose a valid payroll month in YYYY-MM format." },
+      400,
+    );
+  }
+
+  const company = c.get("authUser").company;
   const records = await prisma.payrollRecord.findMany({
-    where: { user: { company: c.get("authUser").company } },
+    where: range
+      ? {
+          payRunMonth: range.payRun,
+          user: {
+            company,
+            basicSalary: { not: null },
+            attendanceRecords: {
+              some: {
+                workDate: { gte: range.start, lte: range.end },
+              },
+            },
+          },
+        }
+      : { user: { company } },
     include: {
       user: {
         select: {
@@ -61,10 +99,27 @@ export async function list(c: Context<AppEnv>) {
 }
 
 export async function generate(c: Context<AppEnv>) {
-  const range = previousMonthRange();
+  const body = (await c.req.json().catch(() => ({}))) as {
+    payRunMonth?: unknown;
+  };
+  const range = payrollMonthRange(body.payRunMonth);
+  if (!range)
+    return c.json(
+      { message: "Choose a valid payroll month in YYYY-MM format." },
+      400,
+    );
   const company = c.get("authUser").company;
   const users = await prisma.user.findMany({
-    where: { company, accountStatus: "Active" },
+    where: {
+      company,
+      accountStatus: "Active",
+      basicSalary: { not: null },
+      attendanceRecords: {
+        some: {
+          workDate: { gte: range.start, lte: range.end },
+        },
+      },
+    },
     select: {
       id: true,
       basicSalary: true,
@@ -82,7 +137,6 @@ export async function generate(c: Context<AppEnv>) {
         where: {
           userId: user.id,
           workDate: { gte: range.start, lte: range.end },
-          checkOutAt: { not: null },
         },
         select: {
           workDate: true,

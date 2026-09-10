@@ -15,10 +15,10 @@ import { useAuth } from "@/Hooks/useAuth";
 import { attendanceService } from "@/Services/attendance.services";
 import { leaveRequestService } from "@/Services/leave-request.services";
 import {
-  documentService,
   loanService,
   salaryAdvanceService,
 } from "@/Services/om.services";
+import { documentService } from "@/Services/document.services";
 
 const time = (value: string | null) =>
   value
@@ -102,16 +102,19 @@ export default function DashboardPage() {
   ];
   const activity = [
     ...leave.map((r) => ({
+      id: `leave-${r.id}`,
       title: "Leave request",
       detail: `${r.leaveType} · ${r.status.toLowerCase()}`,
       date: r.updatedAt,
     })),
     ...advances.map((r) => ({
+      id: `salary-advance-${r.id}`,
       title: "Salary advance",
       detail: `৳${r.requestedAmount} · ${r.status.toLowerCase()}`,
       date: r.updatedAt,
     })),
     ...loans.map((r) => ({
+      id: `loan-${r.id}`,
       title: "Loan request",
       detail: `${r.loanType} · ${r.status.toLowerCase()}`,
       date: r.updatedAt,
@@ -155,7 +158,7 @@ export default function DashboardPage() {
           {activity.length ? (
             activity.map((item) => (
               <div
-                key={`${item.title}-${item.date}`}
+                key={item.id}
                 className="flex gap-3 border-b border-slate-100 px-5 py-4 last:border-0"
               >
                 <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[#2c7469]" />

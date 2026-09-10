@@ -1,7 +1,7 @@
 import axios from "axios";
 import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AuthUser } from "@/Types/auth";
-import type { Loan, SalaryAdvance, UserDocument } from "@/Types/om";
+import type { Loan, SalaryAdvance } from "@/Types/om";
 const api = (path: string) =>
   axios.create({
     baseURL: `${apiBaseUrl}/api/${path}`,
@@ -72,17 +72,6 @@ export const loanService = {
   ) =>
     (await api("loans").patch<{ request: Loan }>(`/${id}`, data)).data.request,
   remove: async (id: string) => api("loans").delete(`/${id}`),
-};
-export const documentService = {
-  list: async () =>
-    (await api("documents").get<{ documents: UserDocument[] }>("/list")).data
-      .documents,
-  create: async (
-    data: Omit<UserDocument, "id" | "status" | "createdAt" | "updatedAt">,
-  ) =>
-    (await api("documents").post<{ document: UserDocument }>("/create", data))
-      .data.document,
-  remove: async (id: string) => api("documents").delete(`/${id}`),
 };
 export const profileService = {
   update: async (data: Pick<AuthUser, "name" | "phone" | "profilePic">) =>

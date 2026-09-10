@@ -73,7 +73,7 @@ export function SimpleTable({
   return (
     <div className={`overflow-x-auto ${className}`}>
       <table
-        className={`w-full min-w-[780px] border-collapse text-left ${tableClassName}`}
+        className={`w-full min-w-195 border-collapse text-left ${tableClassName}`}
       >
         <thead className="bg-[#fbfcfc]">
           <tr className="border-b border-[#e7edec]">
