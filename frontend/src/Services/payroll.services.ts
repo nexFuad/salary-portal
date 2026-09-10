@@ -1,10 +1,8 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type { PayrollRecord } from "@/Types/payroll";
-const base = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 const api = axios.create({
-  baseURL: `${base}/api/payroll`,
+  baseURL: `${apiBaseUrl}/api/payroll`,
   withCredentials: true,
 });
 export const payrollService = {

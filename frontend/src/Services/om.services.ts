@@ -1,12 +1,10 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AuthUser } from "@/Types/auth";
 import type { Loan, SalaryAdvance, UserDocument } from "@/Types/om";
-const base = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 const api = (path: string) =>
   axios.create({
-    baseURL: `${base}/api/${path}`,
+    baseURL: `${apiBaseUrl}/api/${path}`,
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });

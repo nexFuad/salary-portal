@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AttendanceRecord } from "@/Types/attendance";
 
 export type AttendanceSubmission = {
@@ -8,9 +9,6 @@ export type AttendanceSubmission = {
   attendanceTime: string;
 };
 
-const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 const attendanceApi = axios.create({
   baseURL: `${apiBaseUrl}/api/attendance`,
   withCredentials: true,

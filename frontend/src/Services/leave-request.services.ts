@@ -1,9 +1,6 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type { LeaveRequest, LeaveRequestInput } from "@/Types/leave-request";
-
-const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 
 const leaveRequestApi = axios.create({
   baseURL: `${apiBaseUrl}/api/leave-requests`,

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type {
   OfficerAttendanceRecord,
   OfficerDocument,
@@ -8,11 +9,8 @@ import type {
   OfficerSalaryAdvance,
 } from "@/Types/officer-requests";
 import type { OfficerDashboard } from "@/Types/officer-dashboard";
-const base = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 const api = axios.create({
-  baseURL: `${base}/api/officer-requests`,
+  baseURL: `${apiBaseUrl}/api/officer-requests`,
   withCredentials: true,
 });
 export const officerRequestsService = {

@@ -1,9 +1,6 @@
 import axios from "axios";
+import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AuthResponse, LoginPayload } from "@/Types/auth";
-
-const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-).replace(/\/$/, "");
 
 const authApi = axios.create({
   baseURL: `${apiBaseUrl}/api/auth`,
