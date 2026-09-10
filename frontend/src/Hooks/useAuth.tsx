@@ -72,7 +72,16 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 3,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
   );
 
   return (

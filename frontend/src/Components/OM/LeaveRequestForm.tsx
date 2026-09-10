@@ -94,13 +94,11 @@ export default function LeaveRequestForm({
 
   const formContent = (
     <>
-      {requestId && requestQuery.isPending ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-          Loading leave request…
-        </div>
-      ) : requestQuery.isError ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-          This leave request could not be found.
+      {requestId && (requestQuery.isPending || requestQuery.isError) ? (
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="h-10 animate-pulse rounded-lg bg-slate-100" />
+          <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+          <div className="h-10 animate-pulse rounded-lg bg-slate-100" />
         </div>
       ) : (
         <form

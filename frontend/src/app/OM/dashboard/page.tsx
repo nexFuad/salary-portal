@@ -54,18 +54,10 @@ export default function DashboardPage() {
       return { leave, attendance, documents, advances, loans };
     },
   });
-  if (dashboard.isPending)
+  if (dashboard.isPending || dashboard.isError || !dashboard.data)
     return (
       <OmPageShell title="Dashboard" subtitle="Your personal work overview.">
         <TableSkeleton rows={5} />
-      </OmPageShell>
-    );
-  if (dashboard.isError || !dashboard.data)
-    return (
-      <OmPageShell title="Dashboard" subtitle="Your personal work overview.">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-          Could not load dashboard data.
-        </div>
       </OmPageShell>
     );
   const { leave, attendance, documents, advances, loans } = dashboard.data;

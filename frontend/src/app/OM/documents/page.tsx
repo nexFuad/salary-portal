@@ -12,13 +12,10 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import OmPageShell from "@/Components/OM/OmPageShell";
-import OmTable from "@/Components/Shared/OmTable";
-import ActionMenu from "@/Components/Shared/ActionMenu";
 import Modal from "@/Components/Shared/Modal";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
-import TableSkeleton from "@/Components/Shared/TableSkeleton";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
-import { type TableColumn } from "@/Components/Shared/Table";
+import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
 import { documentService } from "@/Services/document.services";
 import type { UserDocument } from "@/Types/om";
 
@@ -32,6 +29,18 @@ const documentTypes = [
   "Bank Document",
   "Other",
 ];
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+const statusClass = (status: UserDocument["status"]) =>
+  ({
+    PENDING: "bg-amber-50 text-amber-700",
+    VERIFIED: "bg-emerald-50 text-emerald-700",
+    REJECTED: "bg-rose-50 text-rose-700",
+  })[status];
 
 export default function OmDocumentsPage() {
   const queryClient = useQueryClient();
@@ -54,6 +63,8 @@ export default function OmDocumentsPage() {
     queryKey: ["documents"],
     queryFn: documentService.list,
   });
+  const documents = documentsQuery.data ?? [];
+  const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(documents);
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a document to upload.");
@@ -75,60 +86,6 @@ export default function OmDocumentsPage() {
       setDocumentToDelete(null);
     },
   });
-  const columns: TableColumn<UserDocument>[] = [
-    {
-      id: "title",
-      header: "Document title",
-      cell: (document) => (
-        <span className="font-medium text-slate-700">{document.title}</span>
-      ),
-    },
-    { id: "type", header: "Type", cell: (document) => document.documentType },
-    {
-      id: "file",
-      header: "File",
-      cell: (document) => (
-        <button
-          type="button"
-          onClick={() => setPreviewDocument(document)}
-          className="inline-flex items-center gap-1 text-left text-[#17665c] hover:underline"
-        >
-          <FileText className="size-3.5" />
-          {document.fileName}
-        </button>
-      ),
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (document) => (
-        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-          {document.status}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: (document) => (
-        <ActionMenu
-          items={[
-            {
-              label: "View",
-              icon: Eye,
-              onClick: () => setPreviewDocument(document),
-            },
-            {
-              label: "Delete",
-              icon: Trash2,
-              danger: true,
-              onClick: () => setDocumentToDelete(document),
-            },
-          ]}
-        />
-      ),
-    },
-  ];
   return (
     <OmPageShell
       title="Documents"
@@ -147,19 +104,76 @@ export default function OmDocumentsPage() {
         </button>
       }
     >
-      {documentsQuery.isPending ? (
-        <TableSkeleton />
+      {documentsQuery.isPending || documentsQuery.isError ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="h-68 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            />
+          ))}
+        </div>
+      ) : documents.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-sm text-slate-500">
+          No documents uploaded yet.
+        </div>
       ) : (
-        <OmTable
-          columns={columns}
-          data={documentsQuery.data ?? []}
-          getRowId={(document) => document.id}
-          emptyMessage="No documents uploaded yet."
-          currentPage={1}
-          totalItems={(documentsQuery.data ?? []).length}
-          pageSize={50}
-          onPageChange={() => {}}
-        />
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleItems.map((document) => (
+              <article
+                key={document.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#edf6f4] text-[#17665c]">
+                      <FileText className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-base font-bold text-slate-800">
+                        {document.title}
+                      </h2>
+                      <p className="mt-0.5 text-xs text-slate-500">{document.documentType}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(document.status)}`}
+                  >
+                    {document.status[0] + document.status.slice(1).toLowerCase()}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs font-medium text-slate-400">File</p>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDocument(document)}
+                      className="mt-1 inline-flex max-w-full items-center gap-1.5 truncate font-medium text-[#17665c] hover:underline"
+                    >
+                      <FileText className="size-3.5 shrink-0" />
+                      <span className="truncate">{document.fileName}</span>
+                    </button>
+                  </div>
+                  {document.description ? (
+                    <div>
+                      <p className="text-xs font-medium text-slate-400">Description</p>
+                      <p className="mt-1 line-clamp-2 text-slate-700">{document.description}</p>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <p className="text-xs text-slate-400">Uploaded {formatDate(document.createdAt)}</p>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => setPreviewDocument(document)} aria-label="View document" title="View" className="grid size-8 place-items-center rounded-lg text-[#17665c] transition hover:bg-[#edf6f4]"><Eye className="size-4" /></button>
+                    <button type="button" onClick={() => setDocumentToDelete(document)} aria-label="Delete document" title="Delete" className="grid size-8 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"><Trash2 className="size-4" /></button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          {hasMore ? <div ref={sentinelRef} className="py-8 text-center text-sm font-medium text-slate-400">Loading more documents…</div> : null}
+        </>
       )}
       {open && (
         <Modal

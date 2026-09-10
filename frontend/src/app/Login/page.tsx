@@ -49,53 +49,17 @@ function LoginForm() {
   }
 
   return (
-    <main className="grid min-h-screen bg-[#f4f8f7] lg:grid-cols-2">
-      <section className="hidden bg-[#e4f0ed] p-12 lg:flex lg:flex-col lg:justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-3 self-start"
-          aria-label="SalaryFlow home"
-        >
-          <span className="grid size-11 place-items-center rounded-xl bg-[#165c55] text-sm font-bold text-white">
-            SF
-          </span>
-          <span className="text-2xl font-semibold tracking-tight text-slate-800">
-            SalaryFlow
-          </span>
-        </Link>
-        <div className="max-w-md">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#b47a1f]">
-            Welcome back
-          </p>
-          <h1 className="mt-5 text-5xl font-bold tracking-tight text-slate-800">
-            Payroll, in one clear place.
-          </h1>
-          <p className="mt-5 text-lg leading-8 text-slate-600">
-            Sign in to manage salaries, employees, and approvals for your
-            organisation.
-          </p>
-        </div>
-        <p className="text-sm text-slate-500">
-          Secure access for Officer and OM teams.
-        </p>
-      </section>
-
-      <section className="flex items-center justify-center px-5 py-10 sm:px-8">
+    <main className="relative min-h-screen bg-[#f4f8f7]">
+      <section className="flex min-h-screen items-center justify-center px-5 py-24 sm:px-8">
         <div className="w-full max-w-md">
-          <Link
-            href="/"
-            className="mb-12 flex items-center gap-3 lg:hidden"
-            aria-label="SalaryFlow home"
-          >
-            <span className="grid size-10 place-items-center rounded-xl bg-[#165c55] text-sm font-bold text-white">
-              SF
-            </span>
-            <span className="text-xl font-semibold text-slate-800">
-              SalaryFlow
-            </span>
-          </Link>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-800">
+            <Link
+              href="/"
+              className="inline-flex items-center text-sm font-semibold text-[#2f766d] transition hover:text-[#165c55]"
+            >
+              ← Back to home
+            </Link>
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-800">
               Sign in
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">

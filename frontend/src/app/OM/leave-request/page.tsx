@@ -2,19 +2,15 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, CalendarPlus, Pencil, Trash2 } from "lucide-react";
 import LeaveRequestForm from "@/Components/OM/LeaveRequestForm";
 import OmPageShell from "@/Components/OM/OmPageShell";
-import ActionMenu from "@/Components/Shared/ActionMenu";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
-import OmTable from "@/Components/Shared/OmTable";
-import TableSkeleton from "@/Components/Shared/TableSkeleton";
-import { type TableColumn } from "@/Components/Shared/Table";
+import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
 import { leaveRequestService } from "@/Services/leave-request.services";
 import type { LeaveRequest } from "@/Types/leave-request";
 
-const pageSize = 10;
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -31,7 +27,6 @@ const statusClass = (status: LeaveRequest["status"]) =>
 
 export default function LeaveRequestPage() {
   const queryClient = useQueryClient();
-  const [currentPage, setCurrentPage] = useState(1);
   const [openRequestId, setOpenRequestId] = useState<string | null | undefined>(
     undefined,
   );
@@ -53,75 +48,8 @@ export default function LeaveRequestPage() {
       setRequestToDelete(null);
     },
   });
-  const totalPages = Math.max(1, Math.ceil(requests.length / pageSize));
-  const page = Math.min(currentPage, totalPages);
-  const visibleRequests = requests.slice(
-    (page - 1) * pageSize,
-    page * pageSize,
-  );
-  const columns: TableColumn<LeaveRequest>[] = [
-    {
-      id: "type",
-      header: "Leave type",
-      cell: (request) => (
-        <span className="font-medium text-slate-700">{request.leaveType}</span>
-      ),
-    },
-    { id: "reason", header: "Reason", cell: (request) => request.reason },
-    {
-      id: "dates",
-      header: "Date range",
-      cell: (request) => (
-        <span className="whitespace-nowrap">
-          {formatDate(request.startDate)} – {formatDate(request.endDate)}
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (request) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
-        >
-          {request.status[0] + request.status.slice(1).toLowerCase()}
-        </span>
-      ),
-    },
-    {
-      id: "submitted",
-      header: "Submitted",
-      cell: (request) => formatDate(request.createdAt),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: (request) => {
-        if (request.status !== "PENDING") {
-          return <span className="text-xs text-slate-400">—</span>;
-        }
-
-        return (
-          <ActionMenu
-            items={[
-              {
-                label: "Edit",
-                icon: Pencil,
-                onClick: () => setOpenRequestId(request.id),
-              },
-              {
-                label: "Delete",
-                icon: Trash2,
-                danger: true,
-                onClick: () => setRequestToDelete(request),
-              },
-            ]}
-          />
-        );
-      },
-    },
-  ];
-
+  const { visibleItems: visibleRequests, hasMore, sentinelRef } =
+    useInfiniteScroll(requests);
   return (
     <OmPageShell
       title="Leave requests"
@@ -138,23 +66,107 @@ export default function LeaveRequestPage() {
         </button>
       }
     >
-      {isPending ? (
-        <TableSkeleton rows={8} />
-      ) : isError ? (
-        <div className="min-h-[70vh] rounded-2xl border border-slate-200 bg-white p-6 text-sm text-rose-600">
-          Could not load leave requests. Please try again.
+      {isPending || isError ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            />
+          ))}
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-sm text-slate-500">
+          No leave request found.
         </div>
       ) : (
-        <OmTable
-          columns={columns}
-          data={visibleRequests}
-          getRowId={(request) => request.id}
-          emptyMessage="No leave request found."
-          currentPage={page}
-          totalItems={requests.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleRequests.map((request) => {
+              const isPending = request.status === "PENDING";
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                        Leave type
+                      </p>
+                      <h2 className="mt-1 truncate text-base font-bold text-slate-800">
+                        {request.leaveType}
+                      </h2>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
+                    >
+                      {request.status[0] + request.status.slice(1).toLowerCase()}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3 text-sm">
+                    <div className="flex gap-2.5 text-slate-600">
+                      <CalendarDays className="mt-0.5 size-4 shrink-0 text-[#2f766d]" />
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">Date range</p>
+                        <p className="mt-0.5 font-medium text-slate-700">
+                          {formatDate(request.startDate)} – {formatDate(request.endDate)}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-400">Reason</p>
+                      <p className="mt-0.5 line-clamp-2 text-slate-700">{request.reason}</p>
+                    </div>
+                    {request.note ? (
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">Note</p>
+                        <p className="mt-0.5 line-clamp-2 text-slate-600">{request.note}</p>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <p className="text-xs text-slate-400">
+                      Submitted {formatDate(request.createdAt)}
+                    </p>
+                    {isPending ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setOpenRequestId(request.id)}
+                          aria-label="Edit leave request"
+                          title="Edit"
+                          className="grid size-8 place-items-center rounded-lg text-[#17665c] transition hover:bg-[#edf6f4]"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRequestToDelete(request)}
+                          aria-label="Delete leave request"
+                          title="Delete"
+                          className="grid size-8 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {hasMore ? (
+            <div
+              ref={sentinelRef}
+              className="py-8 text-center text-sm font-medium text-slate-400"
+            >
+              Loading more leave requests…
+            </div>
+          ) : null}
+        </>
       )}
       {openRequestId !== undefined && (
         <Modal

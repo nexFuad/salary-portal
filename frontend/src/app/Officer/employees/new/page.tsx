@@ -10,6 +10,7 @@ import { ArrowLeft, Camera, Save } from "lucide-react";
 import { employeeService } from "@/Services/employee.services";
 import { uploadProfilePhoto } from "@/Services/upload.services";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
+import TableSkeleton from "@/Components/Shared/TableSkeleton";
 import type { EmployeeInput, EmployeeRecord } from "@/Types/employee";
 
 const emptyForm: EmployeeInput = {
@@ -174,14 +175,8 @@ export default function NewEmployeePage({
     saveMutation.mutate(form);
   }
 
-  if (isEditing && employeeQuery.isPending)
-    return <div className="p-8 text-sm text-slate-500">Loading employee…</div>;
-  if (employeeQuery.isError)
-    return (
-      <div className="p-8 text-sm text-rose-600">
-        Employee could not be loaded.
-      </div>
-    );
+  if (isEditing && (employeeQuery.isPending || employeeQuery.isError))
+    return <TableSkeleton rows={6} />;
 
   return (
     <section className="min-w-0 bg-[#f7f9f9] px-4 py-6 sm:px-6 lg:px-9">

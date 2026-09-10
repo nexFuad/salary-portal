@@ -2,16 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
-import { useAuth } from "@/Hooks/useAuth";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import OmPageShell from "@/Components/OM/OmPageShell";
-import ActionMenu from "@/Components/Shared/ActionMenu";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
-import OmTable from "@/Components/Shared/OmTable";
-import TableSkeleton from "@/Components/Shared/TableSkeleton";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
-import { type TableColumn } from "@/Components/Shared/Table";
+import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
 import { loanService } from "@/Services/om.services";
 import type { Loan } from "@/Types/om";
 type Form = {
@@ -55,19 +51,26 @@ const planEndDate = (startDate: string, months: number) => {
 };
 const statusLabel = (status: Loan["status"]) =>
   status === "COMPLETED" ? "Closed" : status[0] + status.slice(1).toLowerCase();
+const statusClass = (status: Loan["status"]) =>
+  ({
+    PENDING: "bg-amber-50 text-amber-700",
+    APPROVED: "bg-emerald-50 text-emerald-700",
+    REJECTED: "bg-rose-50 text-rose-700",
+    CANCELLED: "bg-slate-100 text-slate-600",
+    COMPLETED: "bg-sky-50 text-sky-700",
+    ACTIVE: "bg-sky-50 text-sky-700",
+  })[status];
 
 export default function OmLoansPage() {
-  const { user } = useAuth();
   const client = useQueryClient();
   const [form, setForm] = useState<Form>(fresh());
   const [editing, setEditing] = useState<Loan | null>(null);
-  const [details, setDetails] = useState<Loan | null>(null);
   const [deleting, setDeleting] = useState<Loan | null>(null);
   const [open, setOpen] = useState(false);
-  const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const query = useQuery({ queryKey: ["loans"], queryFn: loanService.list });
   const records = query.data ?? [];
+  const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(records);
   const save = useMutation({
     mutationFn: () =>
       editing ? loanService.update(editing.id, form) : loanService.create(form),
@@ -99,74 +102,6 @@ export default function OmLoansPage() {
     });
     setOpen(true);
   };
-  const columns: TableColumn<Loan>[] = [
-    {
-      id: "id",
-      header: "Loan ID",
-      cell: (r) => (
-        <span className="font-mono text-xs">
-          {r.id.slice(-8).toUpperCase()}
-        </span>
-      ),
-    },
-    { id: "type", header: "Type", cell: (r) => r.loanType },
-    {
-      id: "amount",
-      header: "Requested",
-      cell: (r) => money(r.requestedAmount),
-    },
-    {
-      id: "monthlyInstallment",
-      header: "Monthly payment",
-      cell: (r) => money(r.monthlyInstallment),
-    },
-    {
-      id: "period",
-      header: "Plan",
-      cell: (r) => `${r.repaymentMonths} months`,
-    },
-    {
-      id: "paid",
-      header: "Paid",
-      cell: (r) => money(r.paidAmount),
-    },
-    {
-      id: "remaining",
-      header: "Remaining",
-      cell: (r) => money(r.remainingAmount),
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (r) => (
-        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-          {statusLabel(r.status)}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: (r) => (
-        <ActionMenu
-          items={[
-            { label: "View details", icon: Eye, onClick: () => setDetails(r) },
-            ...(r.status === "PENDING"
-              ? [
-                  { label: "Edit", icon: Pencil, onClick: () => edit(r) },
-                  {
-                    label: "Delete",
-                    icon: Trash2,
-                    danger: true,
-                    onClick: () => setDeleting(r),
-                  },
-                ]
-              : []),
-          ]}
-        />
-      ),
-    },
-  ];
   return (
     <OmPageShell
       title="Loans"
@@ -187,20 +122,77 @@ export default function OmLoansPage() {
         </button>
       }
     >
-      {query.isPending ? (
-        <TableSkeleton rows={8} />
+      {query.isPending || query.isError ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            />
+          ))}
+        </div>
+      ) : records.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-sm text-slate-500">
+          No loan requests found.
+        </div>
       ) : (
-        <OmTable
-          title="Your loan requests"
-          columns={columns}
-          data={records.slice((page - 1) * 10, page * 10)}
-          getRowId={(r) => r.id}
-          emptyMessage="No loan requests found."
-          currentPage={page}
-          totalItems={records.length}
-          pageSize={10}
-          onPageChange={setPage}
-        />
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleItems.map((request) => {
+              const isPending = request.status === "PENDING";
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                        {request.loanType}
+                      </p>
+                      <h2 className="mt-1 text-xl font-bold text-slate-800">
+                        {money(request.requestedAmount)}
+                      </h2>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
+                    >
+                      {statusLabel(request.status)}
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs font-medium text-slate-400">Repayment period</p>
+                      <p className="mt-0.5 font-medium text-slate-700">
+                        {request.repaymentMonths} months · starts {formattedDate(request.preferredStartDate)}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3">
+                      <div><p className="text-xs text-slate-400">Monthly</p><p className="mt-1 font-semibold text-slate-700">{money(request.monthlyInstallment)}</p></div>
+                      <div><p className="text-xs text-slate-400">Paid</p><p className="mt-1 font-semibold text-slate-700">{money(request.paidAmount)}</p></div>
+                      <div><p className="text-xs text-slate-400">Remaining</p><p className="mt-1 font-semibold text-slate-700">{money(request.remainingAmount)}</p></div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-400">Purpose</p>
+                      <p className="mt-0.5 line-clamp-2 text-slate-700">{request.purpose}</p>
+                    </div>
+                    {request.note ? <div><p className="text-xs font-medium text-slate-400">Note</p><p className="mt-0.5 line-clamp-2 text-slate-600">{request.note}</p></div> : null}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <p className="text-xs text-slate-400">Requested {formattedDate(request.requestDate)}</p>
+                    {isPending ? (
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => edit(request)} aria-label="Edit loan request" title="Edit" className="grid size-8 place-items-center rounded-lg text-[#17665c] transition hover:bg-[#edf6f4]"><Pencil className="size-4" /></button>
+                        <button type="button" onClick={() => setDeleting(request)} aria-label="Delete loan request" title="Delete" className="grid size-8 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"><Trash2 className="size-4" /></button>
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {hasMore ? <div ref={sentinelRef} className="py-8 text-center text-sm font-medium text-slate-400">Loading more loan requests…</div> : null}
+        </>
       )}
       {open && (
         <Modal
@@ -333,32 +325,6 @@ export default function OmLoansPage() {
               </button>
             </div>
           </form>
-        </Modal>
-      )}
-      {details && (
-        <Modal title="Loan details" onClose={() => setDetails(null)}>
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            {[
-              ["Loan ID", details.id],
-              ["Employee", user?.name ?? "—"],
-              ["Type", details.loanType],
-              ["Requested", money(details.requestedAmount)],
-              ["Monthly payment", money(details.monthlyInstallment)],
-              ["Repayment period", `${details.repaymentMonths} months`],
-              ["Start date", formattedDate(details.preferredStartDate)],
-              ["End date", formattedDate(details.repaymentEndDate)],
-              ["Paid", money(details.paidAmount)],
-              ["Remaining", money(details.remainingAmount)],
-              ["Status", statusLabel(details.status)],
-              ["Purpose", details.purpose],
-              ["Admin note", details.adminNote ?? "—"],
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">{k}</p>
-                <p className="mt-1 font-medium text-slate-800">{v}</p>
-              </div>
-            ))}
-          </div>
         </Modal>
       )}
       {deleting && (

@@ -59,16 +59,12 @@ export default function OfficerDashboardPage() {
     queryFn: officerRequestsService.dashboard,
   });
 
-  if (dashboardQuery.isPending) return <DashboardLoading />;
-  if (dashboardQuery.isError || !dashboardQuery.data) {
-    return (
-      <section className="px-3 py-5 sm:px-5 sm:py-6 lg:px-6 lg:py-7">
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
-          Dashboard data could not be loaded. Please refresh and try again.
-        </div>
-      </section>
-    );
-  }
+  if (
+    dashboardQuery.isPending ||
+    dashboardQuery.isError ||
+    !dashboardQuery.data
+  )
+    return <DashboardLoading />;
 
   return <DashboardContent dashboard={dashboardQuery.data} />;
 }

@@ -399,13 +399,8 @@ export default function EmployeesPage() {
             {actionError}
           </p>
         ) : null}
-        {employeeQuery.isPending ? (
+        {employeeQuery.isPending || employeeQuery.isError ? (
           <TableSkeleton rows={8} />
-        ) : employeeQuery.isError ? (
-          <p className="min-h-[70vh] p-6 text-sm text-rose-600">
-            Employees could not be loaded. Please check your session and backend
-            server.
-          </p>
         ) : (
           <>
             <Table

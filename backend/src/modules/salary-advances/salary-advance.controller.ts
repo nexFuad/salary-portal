@@ -72,6 +72,7 @@ export async function updateSalaryAdvance(c: Context<AppEnv>) {
     where: {
       id: c.req.param("id")!,
       userId: c.get("authUser").sub,
+      status: RequestStatus.PENDING,
     },
     data: requestData(body as Record<string, unknown>),
   });
@@ -109,10 +110,14 @@ export async function deleteSalaryAdvance(c: Context<AppEnv>) {
     where: {
       id: c.req.param("id")!,
       userId: c.get("authUser").sub,
+      status: RequestStatus.PENDING,
     },
   });
   if (!result.count) {
-    return c.json({ message: "Salary advance request not found" }, 404);
+    return c.json(
+      { message: "Only your pending salary advance request can be deleted" },
+      404,
+    );
   }
 
   return c.json({ message: "Salary advance request deleted" });
