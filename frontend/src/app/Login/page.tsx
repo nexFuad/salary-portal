@@ -5,17 +5,18 @@ import Link from "next/link";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/Hooks/useAuth";
+import { useToast } from "@/Components/Shared/Toast";
 import { dashboardPathByRole } from "@/Types/auth";
 
 function LoginForm() {
   const { login, user, isLoading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("");
   const [company, setCompany] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const logoutMessage = searchParams.get("loggedOut") === "1";
 
@@ -27,20 +28,20 @@ function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
     setIsSubmitting(true);
     try {
       const user = await login({ employeeId, company, password, rememberMe });
+      showToast("Login successful. Redirecting to your dashboard…", "success");
       router.replace(dashboardPathByRole[user.role]);
-      router.refresh();
     } catch (requestError) {
       const message = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message
         : null;
-      setError(
+      showToast(
         typeof message === "string"
           ? message
           : "Unable to sign in. Please try again.",
+        "error",
       );
     } finally {
       setIsSubmitting(false);
@@ -150,14 +151,6 @@ function LoginForm() {
                 />
                 Remember me on this device
               </label>
-              {error && (
-                <p
-                  role="alert"
-                  className="rounded-lg bg-[#fff1ef] px-4 py-3 text-sm text-[#a43f35]"
-                >
-                  {error}
-                </p>
-              )}
               <button
                 type="submit"
                 disabled={isSubmitting}

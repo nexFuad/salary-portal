@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -50,7 +51,7 @@ export default function PayrollPage() {
     queryKey: ["payroll"],
     queryFn: payrollService.list,
   });
-  const records = listQuery.data ?? [];
+  const records = useMemo(() => listQuery.data ?? [], [listQuery.data]);
   const generateMutation = useMutation({
     mutationFn: payrollService.generate,
     onSuccess: async (result) => {
@@ -129,9 +130,12 @@ export default function PayrollPage() {
       cell: (record) => (
         <div className="flex items-center gap-2.5">
           {record.user.profilePic ? (
-            <img
+            <Image
               src={record.user.profilePic}
               alt=""
+              width={32}
+              height={32}
+              unoptimized
               className="size-8 rounded-full object-cover"
             />
           ) : (

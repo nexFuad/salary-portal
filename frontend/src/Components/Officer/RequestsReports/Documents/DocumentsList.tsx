@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -181,9 +182,12 @@ export default function DocumentsList() {
             <TableCell>
               <div className="flex items-center gap-2">
                 {document.user.profilePic ? (
-                  <img
+                  <Image
                     src={document.user.profilePic}
                     alt=""
+                    width={32}
+                    height={32}
+                    unoptimized
                     className="size-8 rounded-full object-cover"
                   />
                 ) : (
@@ -284,9 +288,12 @@ export default function DocumentsList() {
               className="h-[65vh] w-full"
             />
           ) : (
-            <img
+            <Image
               src={view.fileUrl}
               alt={view.title}
+              width={1000}
+              height={700}
+              unoptimized
               className="max-h-[65vh] w-full object-contain"
             />
           )}

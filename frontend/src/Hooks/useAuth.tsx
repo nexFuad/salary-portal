@@ -61,7 +61,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     user: currentUserQuery.data ?? null,
-    isLoading: currentUserQuery.isPending,
+    isLoading: shouldCheckSession && currentUserQuery.isPending,
     login: loginMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     refreshUser,

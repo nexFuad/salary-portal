@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
@@ -77,9 +78,12 @@ export default function SalaryAdvanceRequests() {
               <TableCell>
                 <div className="flex items-center gap-2">
                   {request.user.profilePic ? (
-                    <img
+                    <Image
                       src={request.user.profilePic}
                       alt=""
+                      width={32}
+                      height={32}
+                      unoptimized
                       className="size-8 rounded-full object-cover"
                     />
                   ) : (

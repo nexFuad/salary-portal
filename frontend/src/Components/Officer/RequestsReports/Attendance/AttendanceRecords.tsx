@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
@@ -141,9 +142,12 @@ export default function AttendanceRecords() {
               <TableCell>
                 <div className="flex items-center gap-2">
                   {r.user.profilePic ? (
-                    <img
+                    <Image
                       src={r.user.profilePic}
                       alt=""
+                      width={32}
+                      height={32}
+                      unoptimized
                       className="size-8 rounded-full object-cover"
                     />
                   ) : (
@@ -183,9 +187,12 @@ export default function AttendanceRecords() {
                   }
                   className="rounded-md outline-none focus:ring-2 focus:ring-[#17665c]"
                 >
-                  <img
+                  <Image
                     src={r.checkInPhotoUrl}
                     alt="Check-in"
+                    width={36}
+                    height={36}
+                    unoptimized
                     className="size-9 rounded-lg object-cover"
                   />
                 </button>
@@ -203,9 +210,12 @@ export default function AttendanceRecords() {
                     }
                     className="rounded-md outline-none focus:ring-2 focus:ring-[#17665c]"
                   >
-                    <img
+                    <Image
                       src={r.checkOutPhotoUrl}
                       alt="Check-out"
+                      width={36}
+                      height={36}
+                      unoptimized
                       className="size-9 rounded-lg object-cover"
                     />
                   </button>
@@ -240,9 +250,12 @@ export default function AttendanceRecords() {
       />
       {photo ? (
         <Modal title={photo.title} onClose={() => setPhoto(null)}>
-          <img
+          <Image
             src={photo.url}
             alt={photo.title}
+            width={1000}
+            height={700}
+            unoptimized
             className="max-h-[65vh] w-full object-contain"
           />
         </Modal>

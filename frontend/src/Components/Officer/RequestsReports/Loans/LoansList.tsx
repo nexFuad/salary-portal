@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
@@ -74,9 +75,12 @@ export default function LoansList() {
               <TableCell>
                 <div className="flex items-center gap-2">
                   {loan.user.profilePic ? (
-                    <img
+                    <Image
                       src={loan.user.profilePic}
                       alt=""
+                      width={32}
+                      height={32}
+                      unoptimized
                       className="size-8 rounded-full object-cover"
                     />
                   ) : (

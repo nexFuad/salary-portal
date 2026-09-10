@@ -99,6 +99,7 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/Login", request.url));
     response.cookies.delete(cookieName);
+    response.cookies.delete(refreshCookieName);
     return response;
   }
 
