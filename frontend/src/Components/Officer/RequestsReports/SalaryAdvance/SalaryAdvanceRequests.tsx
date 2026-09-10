@@ -5,7 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import Pagination from "@/Components/Shared/Pagination";
 import { officerRequestsService } from "@/Services/officer-requests.services";
-import { SimpleTable, StatusBadge, TableCell, TableRow } from "../Shared";
+import {
+  RequestTableSkeleton,
+  SimpleTable,
+  StatusBadge,
+  TableCell,
+  TableRow,
+} from "../Shared";
 
 const pageSize = 10;
 
@@ -62,7 +68,7 @@ export default function SalaryAdvanceRequests() {
           "Actions",
         ]}
       >
-        {rows.map((request) => {
+        {requestsQuery.isPending ? <RequestTableSkeleton columns={7} /> : rows.map((request) => {
           const status =
             request.status[0] + request.status.slice(1).toLowerCase();
 

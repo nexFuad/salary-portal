@@ -74,14 +74,14 @@ export default function ShadcnSelect({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={6}
-          className="z-[70] max-h-64 min-w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+          className="z-70 max-h-64  min-w-(--radix-select-trigger-width) overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
         >
           <SelectPrimitive.Viewport>
             {options.map((option) => (
               <SelectPrimitive.Item
                 key={option.value}
                 value={option.value}
-                className="relative flex cursor-pointer select-none items-center rounded-lg py-2 pl-3 pr-8 text-sm text-slate-700 outline-none data-[highlighted]:bg-[#e8f0ef] data-[highlighted]:text-[#17665c]"
+                className="relative flex cursor-pointer select-none items-center rounded-lg py-2 pl-3 pr-8 text-sm text-slate-700 outline-none data-highlighted:bg-[#e8f0ef] data-highlighted:text-[#17665c]"
               >
                 <SelectPrimitive.ItemText>
                   {option.label}

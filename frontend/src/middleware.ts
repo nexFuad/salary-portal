@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { UserRole } from "@/Types/auth";
 
 const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
+  // Browser requests can use the relative /api rewrite, but middleware runs
+  // on the server and must call the deployed backend with an absolute URL.
+  process.env.BACKEND_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:4000"
 ).replace(/\/$/, "");
 const cookieName = "salary_portal_token";
 const refreshCookieName = "salary_portal_refresh_token";

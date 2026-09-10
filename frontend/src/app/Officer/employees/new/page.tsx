@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -212,9 +213,12 @@ export default function NewEmployeePage({
           <div className="flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
             <label className="relative grid size-20 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-full bg-[#e8f0ef] text-[#17665c] ring-2 ring-white shadow-sm">
               {form.profilePic ? (
-                <img
+                <Image
                   src={form.profilePic}
                   alt="Employee profile"
+                  width={80}
+                  height={80}
+                  unoptimized
                   className="size-full object-cover"
                 />
               ) : (

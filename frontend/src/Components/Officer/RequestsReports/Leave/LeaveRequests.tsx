@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import Pagination from "@/Components/Shared/Pagination";
-import { SimpleTable, StatusBadge, TableCell, TableRow } from "../Shared";
+import {
+  RequestTableSkeleton,
+  SimpleTable,
+  StatusBadge,
+  TableCell,
+  TableRow,
+} from "../Shared";
 const date = (v: string) =>
   new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(v));
 export default function LeaveRequests() {
@@ -38,7 +44,7 @@ export default function LeaveRequests() {
         className="min-h-[70vh]"
         headers={["Employee", "Type", "Date", "Days", "Status", "Actions"]}
       >
-        {paginatedRows.map((r) => {
+        {q.isPending ? <RequestTableSkeleton columns={6} /> : paginatedRows.map((r) => {
           const days = Math.max(
             1,
             Math.ceil(

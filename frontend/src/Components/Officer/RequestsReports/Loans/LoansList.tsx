@@ -5,7 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import Pagination from "@/Components/Shared/Pagination";
 import { officerRequestsService } from "@/Services/officer-requests.services";
-import { SimpleTable, StatusBadge, TableCell, TableRow } from "../Shared";
+import {
+  RequestTableSkeleton,
+  SimpleTable,
+  StatusBadge,
+  TableCell,
+  TableRow,
+} from "../Shared";
 
 const pageSize = 10;
 
@@ -60,7 +66,7 @@ export default function LoansList() {
           "Actions",
         ]}
       >
-        {rows.map((loan) => {
+        {loansQuery.isPending ? <RequestTableSkeleton columns={7} /> : rows.map((loan) => {
           const status = loan.status[0] + loan.status.slice(1).toLowerCase();
 
           return (

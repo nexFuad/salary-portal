@@ -6,7 +6,13 @@ import Modal from "@/Components/Shared/Modal";
 import Pagination from "@/Components/Shared/Pagination";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import type { OfficerAttendanceRecord } from "@/Types/officer-requests";
-import { SimpleTable, StatusBadge, TableCell, TableRow } from "../Shared";
+import {
+  RequestTableSkeleton,
+  SimpleTable,
+  StatusBadge,
+  TableCell,
+  TableRow,
+} from "../Shared";
 const time = (v: string | null) =>
   v
     ? new Intl.DateTimeFormat("en", {
@@ -24,6 +30,49 @@ function duration(minutes: number) {
 function scheduleMinutes(time: string) {
   const [hour, minute] = time.split(":").map(Number);
   return hour * 60 + minute;
+}
+
+function durationLabel(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours && remainingMinutes) return `${hours}h ${remainingMinutes}m`;
+  if (hours) return `${hours}h`;
+  return `${remainingMinutes}m`;
+}
+
+function minutesFromDate(value: string) {
+  const timestamp = new Date(value);
+  return timestamp.getHours() * 60 + timestamp.getMinutes();
+}
+
+function checkInNote(record: OfficerAttendanceRecord) {
+  const difference =
+    minutesFromDate(record.checkInAt) - scheduleMinutes(record.shiftStartTime);
+  if (difference > 0)
+    return { label: `${durationLabel(difference)} late`, className: "text-rose-600" };
+  if (difference < 0)
+    return {
+      label: `${durationLabel(Math.abs(difference))} early check-in`,
+      className: "text-emerald-700",
+    };
+  return { label: "On time", className: "text-emerald-700" };
+}
+
+function checkOutNote(record: OfficerAttendanceRecord) {
+  if (!record.checkOutAt) return null;
+  const difference =
+    minutesFromDate(record.checkOutAt) - scheduleMinutes(record.shiftEndTime);
+  if (difference > 0)
+    return {
+      label: `${durationLabel(difference)} overtime`,
+      className: "text-emerald-700",
+    };
+  if (difference < 0)
+    return {
+      label: `Left ${durationLabel(Math.abs(difference))} early`,
+      className: "text-rose-600",
+    };
+  return { label: "On time", className: "text-emerald-700" };
 }
 
 function hours(record: OfficerAttendanceRecord) {
@@ -83,8 +132,10 @@ export default function AttendanceRecords() {
           "Actions",
         ]}
       >
-        {rows.map((r) => {
+        {q.isPending ? <RequestTableSkeleton columns={11} /> : rows.map((r) => {
           const h = hours(r);
+          const checkIn = checkInNote(r);
+          const checkOut = checkOutNote(r);
           return (
             <TableRow key={r.id}>
               <TableCell>
@@ -106,8 +157,20 @@ export default function AttendanceRecords() {
                 </div>
               </TableCell>
               <TableCell>{date(r.workDate)}</TableCell>
-              <TableCell>{time(r.checkInAt)}</TableCell>
-              <TableCell>{time(r.checkOutAt)}</TableCell>
+              <TableCell>
+                <p className="font-medium text-slate-700">{time(r.checkInAt)}</p>
+                <p className={`mt-0.5 text-[11px] font-medium ${checkIn.className}`}>
+                  {checkIn.label}
+                </p>
+              </TableCell>
+              <TableCell>
+                <p className="font-medium text-slate-700">{time(r.checkOutAt)}</p>
+                {checkOut ? (
+                  <p className={`mt-0.5 text-[11px] font-medium ${checkOut.className}`}>
+                    {checkOut.label}
+                  </p>
+                ) : null}
+              </TableCell>
               <TableCell>
                 <button
                   type="button"

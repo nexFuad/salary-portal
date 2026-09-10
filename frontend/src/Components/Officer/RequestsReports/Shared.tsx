@@ -93,6 +93,36 @@ export function SimpleTable({
   );
 }
 
+export function RequestTableSkeleton({
+  columns,
+  rows = 7,
+}: {
+  columns: number;
+  rows?: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, rowIndex) => (
+        <tr
+          key={rowIndex}
+          aria-hidden="true"
+          className="animate-pulse border-b border-[#e8edec] bg-white last:border-b-0"
+        >
+          {Array.from({ length: columns }, (_, columnIndex) => (
+            <td key={columnIndex} className="px-5 py-4">
+              <div
+                className={`h-4 rounded bg-slate-100 ${
+                  columnIndex === 0 ? "w-32" : columnIndex === columns - 1 ? "w-16" : "w-20"
+                }`}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export function TableRow({ children }: { children: ReactNode }) {
   return (
     <tr className="border-b border-[#e8edec] bg-white last:border-b-0">

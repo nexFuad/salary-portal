@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { jsPDF } from "jspdf";
 import { useMemo, useState } from "react";
@@ -57,6 +59,7 @@ function formatMoney(value: string | null) {
 }
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("All departments");
   const [status, setStatus] = useState("All statuses");
@@ -72,7 +75,10 @@ export default function EmployeesPage() {
     queryKey: ["officer-employees"],
     queryFn: employeeService.list,
   });
-  const employees = employeeQuery.data ?? [];
+  const employees = useMemo(
+    () => employeeQuery.data ?? [],
+    [employeeQuery.data],
+  );
   const refreshEmployees = () =>
     queryClient.invalidateQueries({ queryKey: ["officer-employees"] });
   const statusMutation = useMutation({
@@ -165,9 +171,12 @@ export default function EmployeesPage() {
         <div className="flex items-center gap-2.5">
           <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#17665c] text-[10px] font-bold text-white">
             {employee.profilePic ? (
-              <img
+              <Image
                 src={employee.profilePic}
                 alt=""
+                width={36}
+                height={36}
+                unoptimized
                 className="size-full object-cover"
               />
             ) : (
@@ -243,7 +252,7 @@ export default function EmployeesPage() {
               label: "Edit",
               icon: Pencil,
               onClick: () =>
-                window.location.assign(`/Officer/employees/${employee.id}`),
+                router.push(`/Officer/employees/${employee.id}`),
             },
             employee.accountStatus === "Suspended"
               ? {
@@ -297,7 +306,7 @@ export default function EmployeesPage() {
     pdf.text("Status", 500, 68);
     pdf.text("Email", 585, 68);
     let y = 86;
-    filteredEmployees.forEach((employee, index) => {
+    filteredEmployees.forEach((employee) => {
       if (y > 550) {
         pdf.addPage();
         y = 42;
@@ -338,7 +347,7 @@ export default function EmployeesPage() {
             className="hidden shrink-0 text-[#71808a] sm:block"
             size={21}
           />
-          <label className="col-span-2 flex h-10 min-w-[210px] items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-[260px] lg:flex-1">
+          <label className="col-span-2 flex h-10 min-w-52.5 items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-65 lg:flex-1">
             <Search size={17} />
             <input
               value={query}
@@ -352,7 +361,7 @@ export default function EmployeesPage() {
           <ShadcnSelect
             value={department}
             onValueChange={(value) => resetPage(() => setDepartment(value))}
-            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-[165px] lg:shrink-0"
+            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-41.25 lg:shrink-0"
             options={["All departments", ...departments].map((value) => ({
               label: value,
               value,
@@ -361,7 +370,7 @@ export default function EmployeesPage() {
           <ShadcnSelect
             value={status}
             onValueChange={(value) => resetPage(() => setStatus(value))}
-            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-[145px] lg:shrink-0"
+            className="h-10 rounded-lg text-xs font-medium text-[#58646d] lg:w-36.25 lg:shrink-0"
             options={["All statuses", ...statuses].map((value) => ({
               label: value,
               value,

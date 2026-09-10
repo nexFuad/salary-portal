@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Download,
   Eye,
   FileText,
+  LoaderCircle,
   Search,
   Trash2,
   Upload,
@@ -20,7 +21,13 @@ import { useSearchBar } from "@/Hooks/useSearchBar";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import type { OfficerDocument } from "@/Types/officer-requests";
 import { uploadDocument } from "@/Services/upload.services";
-import { SimpleTable, StatusBadge, TableCell, TableRow } from "../Shared";
+import {
+  RequestTableSkeleton,
+  SimpleTable,
+  StatusBadge,
+  TableCell,
+  TableRow,
+} from "../Shared";
 
 const documentTypes = [
   "Resume/CV",
@@ -60,10 +67,12 @@ async function downloadFile(document: OfficerDocument) {
 
 export default function DocumentsList() {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState(1);
   const [view, setView] = useState<OfficerDocument | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState("");
   const [form, setForm] = useState({
     title: "",
     documentType: documentTypes[0],
@@ -99,9 +108,14 @@ export default function DocumentsList() {
     onSuccess: () => {
       setIsUploadOpen(false);
       setFile(null);
+      setUploadError("");
       setForm({ title: "", documentType: documentTypes[0], description: "" });
       queryClient.invalidateQueries({ queryKey: ["officer-documents"] });
     },
+    onError: (error) =>
+      setUploadError(
+        error instanceof Error ? error.message : "Document upload failed.",
+      ),
   });
   const deleteMutation = useMutation({
     mutationFn: officerRequestsService.deleteDocument,
@@ -162,7 +176,7 @@ export default function DocumentsList() {
           "Actions",
         ]}
       >
-        {rows.map((document) => (
+        {documentsQuery.isPending ? <RequestTableSkeleton columns={6} /> : rows.map((document) => (
           <TableRow key={document.id}>
             <TableCell>
               <div className="flex items-center gap-2">
@@ -284,45 +298,94 @@ export default function DocumentsList() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
+              setUploadError("");
+              if (!file) {
+                setUploadError("Choose a document to upload.");
+                return;
+              }
               uploadMutation.mutate();
             }}
-            className="space-y-3"
+            className="grid gap-4"
           >
-            <input
-              required
-              value={form.title}
-              onChange={(event) =>
-                setForm({ ...form, title: event.target.value })
-              }
-              placeholder="Document title"
-              className="h-11 w-full rounded-lg border px-3"
-            />
-            <ShadcnSelect
-              value={form.documentType}
-              onValueChange={(documentType) =>
-                setForm({ ...form, documentType })
-              }
-              options={documentTypes.map((value) => ({ label: value, value }))}
-            />
-            <textarea
-              value={form.description}
-              onChange={(event) =>
-                setForm({ ...form, description: event.target.value })
-              }
-              placeholder="Description (optional)"
-              className="w-full rounded-lg border p-3"
-            />
-            <input
-              required
-              type="file"
-              accept="application/pdf,image/jpeg,image/png"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
+            <label className="text-sm font-medium text-slate-700">
+              Document title
+              <input
+                required
+                value={form.title}
+                disabled={uploadMutation.isPending}
+                onChange={(event) =>
+                  setForm({ ...form, title: event.target.value })
+                }
+                placeholder="e.g. Employment contract"
+                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-[#17665c] focus:ring-2 focus:ring-[#17665c]/10"
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Document type
+              <ShadcnSelect
+                value={form.documentType}
+                disabled={uploadMutation.isPending}
+                onValueChange={(documentType) =>
+                  setForm({ ...form, documentType })
+                }
+                className="mt-1.5"
+                options={documentTypes.map((value) => ({ label: value, value }))}
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Description{" "}
+              <span className="font-normal text-slate-400">(optional)</span>
+              <textarea
+                value={form.description}
+                disabled={uploadMutation.isPending}
+                onChange={(event) =>
+                  setForm({ ...form, description: event.target.value })
+                }
+                placeholder="Add a short note"
+                className="mt-1.5 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none transition focus:border-[#17665c] focus:ring-2 focus:ring-[#17665c]/10"
+              />
+            </label>
+            <div>
+              <p className="text-sm font-medium text-slate-700">File</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,image/jpeg,image/png"
+                className="hidden"
+                disabled={uploadMutation.isPending}
+                onChange={(event) => {
+                  setFile(event.target.files?.[0] ?? null);
+                  setUploadError("");
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploadMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#78aaa2] bg-[#eff7f5] px-4 py-5 text-sm font-semibold text-[#17665c] disabled:opacity-60"
+              >
+                <Upload className="size-4" />
+                {file ? file.name : "Choose PDF, JPG, or PNG file"}
+              </button>
+              <p className="mt-1 text-xs text-slate-400">
+                Maximum file size: 10 MB
+              </p>
+            </div>
+            {uploadError ? (
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {uploadError}
+              </p>
+            ) : null}
             <button
               disabled={uploadMutation.isPending}
-              className="w-full rounded-lg bg-[#1d625b] py-3 font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-[#17665c] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {uploadMutation.isPending ? "Uploading…" : "Upload document"}
+              {uploadMutation.isPending && (
+                <LoaderCircle className="mr-2 inline size-4 animate-spin" />
+              )}
+              {uploadMutation.isPending
+                ? "File uploading, please wait…"
+                : "Upload document"}
             </button>
           </form>
         </Modal>
