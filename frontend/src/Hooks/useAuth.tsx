@@ -9,6 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { authService } from "@/Services/auth.services";
 import type { AuthContextValue, AuthUser, LoginPayload } from "@/Types/auth";
 
@@ -29,9 +30,12 @@ async function getAuthenticatedUser() {
 
 function AuthContextProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const shouldCheckSession = pathname !== "/" && pathname !== "/Login";
   const currentUserQuery = useQuery({
     queryKey: authUserQueryKey,
     queryFn: getAuthenticatedUser,
+    enabled: shouldCheckSession,
     staleTime: 1000 * 60 * 5,
     retry: false,
     refetchOnWindowFocus: false,

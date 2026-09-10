@@ -29,10 +29,10 @@ function LoginForm() {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
-
     try {
       const user = await login({ employeeId, company, password, rememberMe });
-      window.location.replace(dashboardPathByRole[user.role]);
+      router.replace(dashboardPathByRole[user.role]);
+      router.refresh();
     } catch (requestError) {
       const message = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message
