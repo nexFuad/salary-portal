@@ -102,11 +102,11 @@ export default function SalaryAdvancePage() {
       }
     >
       {query.isPending || query.isError ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
               key={index}
-              className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              className="h-52 animate-pulse rounded-2xl border border-slate-200 bg-white"
             />
           ))}
         </div>
@@ -116,23 +116,16 @@ export default function SalaryAdvancePage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {visibleItems.map((request) => {
               const isPending = request.status === "PENDING";
               return (
                 <article
                   key={request.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                  className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Requested amount
-                      </p>
-                      <h2 className="mt-1 text-xl font-bold text-slate-800">
-                        {amount(request.requestedAmount)}
-                      </h2>
-                    </div>
+                    <p className="text-sm font-semibold text-slate-700">Salary advance</p>
                     <span
                       className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
                     >
@@ -140,8 +133,12 @@ export default function SalaryAdvancePage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-slate-400">Requested amount</p>
+                        <p className="mt-1 font-semibold text-slate-800">{amount(request.requestedAmount)}</p>
+                      </div>
                       <div>
                         <p className="text-xs text-slate-400">Repayment</p>
                         <p className="mt-1 font-semibold text-slate-700">{request.repaymentMonths} months</p>
@@ -151,16 +148,16 @@ export default function SalaryAdvancePage() {
                         <p className="mt-1 font-semibold text-slate-700">{amount(request.approvedAmount ?? request.requestedAmount)}</p>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-400">Reason</p>
-                      <p className="mt-0.5 line-clamp-2 text-slate-700">{request.reason}</p>
-                    </div>
-                    {request.note ? (
+                    <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                       <div>
-                        <p className="text-xs font-medium text-slate-400">Note</p>
-                        <p className="mt-0.5 line-clamp-2 text-slate-600">{request.note}</p>
+                        <p className="text-xs font-medium text-slate-400">Reason</p>
+                        <p className="mt-0.5 line-clamp-1 text-slate-700">{request.reason}</p>
                       </div>
-                    ) : null}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-400">Note</p>
+                        <p className="mt-0.5 line-clamp-1 text-slate-600">{request.note || "—"}</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">

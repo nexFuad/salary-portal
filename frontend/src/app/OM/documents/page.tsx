@@ -105,11 +105,11 @@ export default function OmDocumentsPage() {
       }
     >
       {documentsQuery.isPending || documentsQuery.isError ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
               key={index}
-              className="h-68 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-white"
             />
           ))}
         </div>
@@ -119,11 +119,11 @@ export default function OmDocumentsPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {visibleItems.map((document) => (
               <article
                 key={document.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -158,7 +158,7 @@ export default function OmDocumentsPage() {
                   {document.description ? (
                     <div>
                       <p className="text-xs font-medium text-slate-400">Description</p>
-                      <p className="mt-1 line-clamp-2 text-slate-700">{document.description}</p>
+                      <p className="mt-1 line-clamp-1 text-slate-700">{document.description}</p>
                     </div>
                   ) : null}
                 </div>

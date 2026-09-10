@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, CalendarPlus, Pencil, Trash2 } from "lucide-react";
+import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
 import LeaveRequestForm from "@/Components/OM/LeaveRequestForm";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
@@ -67,11 +67,11 @@ export default function LeaveRequestPage() {
       }
     >
       {isPending || isError ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
               key={index}
-              className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              className="h-52 animate-pulse rounded-2xl border border-slate-200 bg-white"
             />
           ))}
         </div>
@@ -81,23 +81,16 @@ export default function LeaveRequestPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {visibleRequests.map((request) => {
               const isPending = request.status === "PENDING";
               return (
                 <article
                   key={request.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                  className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Leave type
-                      </p>
-                      <h2 className="mt-1 truncate text-base font-bold text-slate-800">
-                        {request.leaveType}
-                      </h2>
-                    </div>
+                    <p className="text-sm font-semibold text-slate-700">Leave request</p>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
                     >
@@ -105,26 +98,22 @@ export default function LeaveRequestPage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="flex gap-2.5 text-slate-600">
-                      <CalendarDays className="mt-0.5 size-4 shrink-0 text-[#2f766d]" />
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <p className="text-xs font-medium text-slate-400">Date range</p>
-                        <p className="mt-0.5 font-medium text-slate-700">
-                          {formatDate(request.startDate)} – {formatDate(request.endDate)}
-                        </p>
+                        <p className="text-xs text-slate-400">Leave type</p>
+                        <p className="mt-1 font-semibold text-slate-700">{request.leaveType}</p>
                       </div>
+                      <div><p className="text-xs text-slate-400">Start date</p><p className="mt-1 font-semibold text-slate-700">{formatDate(request.startDate)}</p></div>
+                      <div><p className="text-xs text-slate-400">End date</p><p className="mt-1 font-semibold text-slate-700">{formatDate(request.endDate)}</p></div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-400">Reason</p>
-                      <p className="mt-0.5 line-clamp-2 text-slate-700">{request.reason}</p>
-                    </div>
-                    {request.note ? (
+                    <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                       <div>
-                        <p className="text-xs font-medium text-slate-400">Note</p>
-                        <p className="mt-0.5 line-clamp-2 text-slate-600">{request.note}</p>
+                        <p className="text-xs font-medium text-slate-400">Reason</p>
+                        <p className="mt-0.5 line-clamp-1 text-slate-700">{request.reason}</p>
                       </div>
-                    ) : null}
+                      <div><p className="text-xs font-medium text-slate-400">Note</p><p className="mt-0.5 line-clamp-1 text-slate-600">{request.note || "—"}</p></div>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">

@@ -123,11 +123,11 @@ export default function OmLoansPage() {
       }
     >
       {query.isPending || query.isError ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
               key={index}
-              className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-white"
             />
           ))}
         </div>
@@ -137,46 +137,32 @@ export default function OmLoansPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {visibleItems.map((request) => {
               const isPending = request.status === "PENDING";
               return (
                 <article
                   key={request.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                  className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        {request.loanType}
-                      </p>
-                      <h2 className="mt-1 text-xl font-bold text-slate-800">
-                        {money(request.requestedAmount)}
-                      </h2>
-                    </div>
+                    <p className="text-sm font-semibold text-slate-700">{request.loanType}</p>
                     <span
                       className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(request.status)}`}
                     >
                       {statusLabel(request.status)}
                     </span>
                   </div>
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div>
-                      <p className="text-xs font-medium text-slate-400">Repayment period</p>
-                      <p className="mt-0.5 font-medium text-slate-700">
-                        {request.repaymentMonths} months · starts {formattedDate(request.preferredStartDate)}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3">
-                      <div><p className="text-xs text-slate-400">Monthly</p><p className="mt-1 font-semibold text-slate-700">{money(request.monthlyInstallment)}</p></div>
-                      <div><p className="text-xs text-slate-400">Paid</p><p className="mt-1 font-semibold text-slate-700">{money(request.paidAmount)}</p></div>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div><p className="text-xs text-slate-400">Requested amount</p><p className="mt-1 font-semibold text-slate-700">{money(request.requestedAmount)}</p></div>
+                      <div><p className="text-xs text-slate-400">Repayment</p><p className="mt-1 font-semibold text-slate-700">{request.repaymentMonths} months</p></div>
                       <div><p className="text-xs text-slate-400">Remaining</p><p className="mt-1 font-semibold text-slate-700">{money(request.remainingAmount)}</p></div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-400">Purpose</p>
-                      <p className="mt-0.5 line-clamp-2 text-slate-700">{request.purpose}</p>
+                    <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+                      <div><p className="text-xs font-medium text-slate-400">Purpose</p><p className="mt-0.5 line-clamp-1 text-slate-700">{request.purpose}</p></div>
+                      <div><p className="text-xs font-medium text-slate-400">Note</p><p className="mt-0.5 line-clamp-1 text-slate-600">{request.note || "—"}</p></div>
                     </div>
-                    {request.note ? <div><p className="text-xs font-medium text-slate-400">Note</p><p className="mt-0.5 line-clamp-2 text-slate-600">{request.note}</p></div> : null}
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                     <p className="text-xs text-slate-400">Requested {formattedDate(request.requestDate)}</p>
