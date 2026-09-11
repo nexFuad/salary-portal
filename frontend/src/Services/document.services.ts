@@ -47,8 +47,8 @@ async function uploadDocumentDetails(file: File): Promise<UploadedDocumentFile> 
 }
 
 export const documentService = {
-  list: async () =>
-    (await employeeDocumentsApi.get<{ documents: UserDocument[] }>("/list"))
+  list: async (filters?: { search?: string }) =>
+    (await employeeDocumentsApi.get<{ documents: UserDocument[] }>("/list", { params: filters }))
       .data.documents,
   upload: async (details: DocumentDetails, file: File) => {
     const uploadedFile = await uploadDocumentDetails(file);
@@ -63,9 +63,12 @@ export const documentService = {
 };
 
 export const officerDocumentService = {
-  list: async (): Promise<OfficerDocument[]> =>
-    (await officerDocumentsApi.get<{ documents: OfficerDocument[] }>(""))
-      .data.documents,
+  list: async (filters?: { search?: string }): Promise<OfficerDocument[]> =>
+    (
+      await officerDocumentsApi.get<{ documents: OfficerDocument[] }>("", {
+        params: filters,
+      })
+    ).data.documents,
   upload: async (details: DocumentDetails, file: File) => {
     const uploadedFile = await uploadDocumentDetails(file);
     return (

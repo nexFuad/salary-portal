@@ -24,9 +24,12 @@ function toResponse(
   return request;
 }
 
-export async function listLeaveRequests(userId: string) {
+export async function listLeaveRequests(userId: string, search?: string) {
+  const term = search?.trim();
   const requests = await prisma.leaveRequest.findMany({
-    where: { userId },
+    where: term
+      ? { userId, OR: [{ leaveType: { contains: term, mode: "insensitive" } }, { reason: { contains: term, mode: "insensitive" } }, { note: { contains: term, mode: "insensitive" } }] }
+      : { userId },
     select: leaveRequestSelect,
     orderBy: { createdAt: "desc" },
   });

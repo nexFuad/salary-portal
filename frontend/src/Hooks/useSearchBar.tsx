@@ -1,51 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-export type SearchField<T> = keyof T | ((item: T) => unknown);
-
-type UseSearchBarOptions<T> = {
-  data: T[];
-  searchFields: SearchField<T>[];
+type UseSearchBarOptions = {
   initialQuery?: string;
+  delay?: number;
 };
 
-function normalizeSearchValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) return value.map(normalizeSearchValue).join(" ");
-
-  return String(value).toLocaleLowerCase();
-}
-
-export function useSearchBar<T>({
-  data,
-  searchFields,
+/** Debounces user input before it is sent as a server-side search parameter. */
+export function useSearchBar({
   initialQuery = "",
-}: UseSearchBarOptions<T>) {
+  delay = 350,
+}: UseSearchBarOptions = {}) {
   const [query, setQuery] = useState(initialQuery);
-  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const [searchQuery, setSearchQuery] = useState(initialQuery.trim());
 
-  const filteredData = useMemo(() => {
-    if (!normalizedQuery) return data;
-
-    return data.filter((item) =>
-      searchFields.some((field) => {
-        const value = typeof field === "function" ? field(item) : item[field];
-        return normalizeSearchValue(value).includes(normalizedQuery);
-      }),
-    );
-  }, [data, normalizedQuery, searchFields]);
-
-  function clearSearch() {
-    setQuery("");
-  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchQuery(query.trim()), delay);
+    return () => window.clearTimeout(timer);
+  }, [delay, query]);
 
   return {
     query,
     setQuery,
-    clearSearch,
-    filteredData,
-    hasQuery: normalizedQuery.length > 0,
-    resultCount: filteredData.length,
+    searchQuery,
+    clearSearch: () => setQuery(""),
+    hasQuery: Boolean(searchQuery),
   };
 }

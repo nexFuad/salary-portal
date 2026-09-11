@@ -91,7 +91,12 @@ function errorMessage(error: unknown) {
 }
 
 export async function list(c: Context<AppEnv>) {
-  const employees = await listEmployees(c.get("authUser").company);
+  const status = c.req.query("status");
+  const employees = await listEmployees(c.get("authUser").company, {
+    search: c.req.query("search") || undefined,
+    department: c.req.query("department") || undefined,
+    status: status === "Active" || status === "Suspended" ? status : undefined,
+  });
   return c.json({ employees });
 }
 

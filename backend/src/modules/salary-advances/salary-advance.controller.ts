@@ -29,8 +29,11 @@ function requestData(body: Record<string, unknown>) {
   };
 }
 export async function getSalaryAdvances(c: Context<AppEnv>) {
+  const search = c.req.query("search")?.trim();
   const requests = await prisma.salaryAdvanceRequest.findMany({
-    where: { userId: c.get("authUser").sub },
+    where: search
+      ? { userId: c.get("authUser").sub, OR: [{ reason: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
+      : { userId: c.get("authUser").sub },
     orderBy: { createdAt: "desc" },
   });
   return c.json({ requests });

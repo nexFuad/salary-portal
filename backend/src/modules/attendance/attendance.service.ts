@@ -34,9 +34,10 @@ export async function getCurrentAttendance(userId: string) {
   });
 }
 
-export async function listAttendance(userId: string) {
+export async function listAttendance(userId: string, search?: string) {
+  const term = search?.trim();
   return prisma.attendanceRecord.findMany({
-    where: { userId },
+    where: term ? { userId, OR: [{ shiftStartTime: { contains: term } }, { shiftEndTime: { contains: term } }] } : { userId },
     select: attendanceSelect,
     orderBy: { workDate: "desc" },
   });

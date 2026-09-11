@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { loanService } from "@/Services/om.services";
 import type { Loan } from "@/Types/om";
 type Form = {
@@ -63,12 +64,13 @@ const statusClass = (status: Loan["status"]) =>
 
 export default function OmLoansPage() {
   const client = useQueryClient();
+  const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
   const [form, setForm] = useState<Form>(fresh());
   const [editing, setEditing] = useState<Loan | null>(null);
   const [deleting, setDeleting] = useState<Loan | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
-  const query = useQuery({ queryKey: ["loans"], queryFn: loanService.list });
+  const query = useQuery({ queryKey: ["loans", searchQuery], queryFn: () => loanService.list({ search: searchQuery || undefined }) });
   const records = query.data ?? [];
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(records);
   const save = useMutation({
@@ -122,6 +124,7 @@ export default function OmLoansPage() {
         </button>
       }
     >
+      <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search loan requests" className="min-w-0 flex-1 text-sm outline-none" /></label>
       {query.isPending || query.isError ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (

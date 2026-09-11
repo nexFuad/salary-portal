@@ -9,8 +9,8 @@ const api = (path: string) =>
     headers: { "Content-Type": "application/json" },
   });
 export const salaryAdvanceService = {
-  list: async () =>
-    (await api("salary-advances").get<{ requests: SalaryAdvance[] }>("/list"))
+  list: async (filters?: { search?: string }) =>
+    (await api("salary-advances").get<{ requests: SalaryAdvance[] }>("/list", { params: filters }))
       .data.requests,
   create: async (data: {
     requestedAmount: string;
@@ -44,8 +44,8 @@ export const salaryAdvanceService = {
   remove: async (id: string) => api("salary-advances").delete(`/${id}`),
 };
 export const loanService = {
-  list: async () =>
-    (await api("loans").get<{ requests: Loan[] }>("/list")).data.requests,
+  list: async (filters?: { search?: string }) =>
+    (await api("loans").get<{ requests: Loan[] }>("/list", { params: filters })).data.requests,
   get: async (id: string) =>
     (await api("loans").get<{ request: Loan }>(`/${id}`)).data.request,
   create: async (data: {

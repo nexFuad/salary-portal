@@ -23,7 +23,7 @@ function normalizedInput(input) {
     };
 }
 export async function list(c) {
-    const requests = await listLeaveRequests(c.get("authUser").sub);
+    const requests = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"));
     return c.json({ requests });
 }
 export async function getById(c) {

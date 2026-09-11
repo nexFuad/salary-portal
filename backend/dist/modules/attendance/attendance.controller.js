@@ -34,7 +34,7 @@ export async function current(c) {
     return c.json({ attendance });
 }
 export async function list(c) {
-    const attendance = await listAttendance(c.get("authUser").sub);
+    const attendance = await listAttendance(c.get("authUser").sub, c.req.query("search"));
     return c.json({ attendance });
 }
 export async function checkInForToday(c) {

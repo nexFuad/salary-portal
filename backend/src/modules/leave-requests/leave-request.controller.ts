@@ -44,7 +44,7 @@ function normalizedInput(
 }
 
 export async function list(c: Context<AppEnv>) {
-  const requests = await listLeaveRequests(c.get("authUser").sub);
+  const requests = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"));
   return c.json({ requests });
 }
 

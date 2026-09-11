@@ -66,7 +66,12 @@ function errorMessage(error) {
     return "Could not save the employee. Please try again.";
 }
 export async function list(c) {
-    const employees = await listEmployees(c.get("authUser").company);
+    const status = c.req.query("status");
+    const employees = await listEmployees(c.get("authUser").company, {
+        search: c.req.query("search") || undefined,
+        department: c.req.query("department") || undefined,
+        status: status === "Active" || status === "Suspended" ? status : undefined,
+    });
     return c.json({ employees });
 }
 export async function getById(c) {

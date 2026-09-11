@@ -9,9 +9,10 @@ const leaveRequestApi = axios.create({
 });
 
 export const leaveRequestService = {
-  async list() {
+  async list(filters?: { search?: string }) {
     const response = await leaveRequestApi.get<{ requests: LeaveRequest[] }>(
       "/list",
+      { params: filters },
     );
     return response.data.requests;
   },

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
 import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { salaryAdvanceService } from "@/Services/om.services";
 import type { SalaryAdvance } from "@/Types/om";
 
@@ -44,14 +45,15 @@ const statusClass = (status: SalaryAdvance["status"]) =>
 
 export default function SalaryAdvancePage() {
   const client = useQueryClient();
+  const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
   const [form, setForm] = useState<Form>(initialForm());
   const [editing, setEditing] = useState<SalaryAdvance | null>(null);
   const [deleting, setDeleting] = useState<SalaryAdvance | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const query = useQuery({
-    queryKey: ["salary-advances"],
-    queryFn: salaryAdvanceService.list,
+    queryKey: ["salary-advances", searchQuery],
+    queryFn: () => salaryAdvanceService.list({ search: searchQuery || undefined }),
   });
   const records = query.data ?? [];
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(records);
@@ -101,6 +103,7 @@ export default function SalaryAdvancePage() {
         </button>
       }
     >
+      <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search salary advances" className="min-w-0 flex-1 text-sm outline-none" /></label>
       {query.isPending || query.isError ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (

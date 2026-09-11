@@ -62,8 +62,11 @@ function requestData(body: Record<string, unknown>) {
 }
 export async function getLoans(c: Context<AppEnv>) {
   await refreshLoanRepaymentProgress(c.get("authUser").sub);
+  const search = c.req.query("search")?.trim();
   const requests = await prisma.loanRequest.findMany({
-    where: { userId: c.get("authUser").sub },
+    where: search
+      ? { userId: c.get("authUser").sub, OR: [{ loanType: { contains: search, mode: "insensitive" } }, { purpose: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
+      : { userId: c.get("authUser").sub },
     orderBy: { createdAt: "desc" },
   });
   return c.json({ requests });

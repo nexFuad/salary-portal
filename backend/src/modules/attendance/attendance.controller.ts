@@ -48,7 +48,7 @@ export async function current(c: Context<AppEnv>) {
 }
 
 export async function list(c: Context<AppEnv>) {
-  const attendance = await listAttendance(c.get("authUser").sub);
+  const attendance = await listAttendance(c.get("authUser").sub, c.req.query("search"));
   return c.json({ attendance });
 }
 

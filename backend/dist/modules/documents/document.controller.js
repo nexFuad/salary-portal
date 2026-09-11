@@ -11,8 +11,11 @@ const types = [
 ];
 const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png"];
 export async function getDocuments(c) {
+    const search = c.req.query("search")?.trim();
     const documents = await prisma.userDocument.findMany({
-        where: { userId: c.get("authUser").sub },
+        where: search
+            ? { userId: c.get("authUser").sub, OR: [{ title: { contains: search, mode: "insensitive" } }, { documentType: { contains: search, mode: "insensitive" } }, { fileName: { contains: search, mode: "insensitive" } }, { description: { contains: search, mode: "insensitive" } }] }
+            : { userId: c.get("authUser").sub },
         orderBy: { createdAt: "desc" },
     });
     return c.json({ documents });

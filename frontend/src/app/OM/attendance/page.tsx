@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { CalendarDays, Camera, Clock3, LogIn, LogOut, Trash2 } from "lucide-react";
+import { CalendarDays, Camera, Clock3, LogIn, LogOut, Search, Trash2 } from "lucide-react";
 import CameraCapture from "@/Components/Shared/CameraCapture";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { attendanceService } from "@/Services/attendance.services";
 import { uploadAttendancePhoto } from "@/Services/upload.services";
 import type { AttendanceRecord } from "@/Types/attendance";
@@ -109,6 +110,7 @@ function checkOutNote(record: AttendanceRecord) {
 
 export default function OmAttendancePage() {
   const queryClient = useQueryClient();
+  const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
   const [action, setAction] = useState<AttendanceAction>(null);
   const [photo, setPhoto] = useState<{ file: Blob; previewUrl: string } | null>(
     null,
@@ -135,8 +137,8 @@ export default function OmAttendancePage() {
     queryFn: attendanceService.current,
   });
   const listQuery = useQuery({
-    queryKey: ["attendance"],
-    queryFn: attendanceService.list,
+    queryKey: ["attendance", searchQuery],
+    queryFn: () => attendanceService.list({ search: searchQuery || undefined }),
     enabled: activeTab === "history",
   });
   const currentAttendance = currentQuery.data ?? null;
@@ -278,7 +280,9 @@ export default function OmAttendancePage() {
             {currentAttendance ? `Check out · checked in at ${formatTime(currentAttendance.checkInAt)}` : "Check in"}
           </button>
         </article>
-      ) : listQuery.isPending || listQuery.isError ? (
+      ) : <>
+        <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search attendance history" className="min-w-0 flex-1 text-sm outline-none" /></label>
+      {listQuery.isPending || listQuery.isError ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</div>
       ) : records.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-sm text-slate-500">No attendance record found.</section>
@@ -293,7 +297,7 @@ export default function OmAttendancePage() {
           </div>
           {hasMore ? <div ref={sentinelRef} className="py-8 text-center text-sm font-medium text-slate-400">Loading more attendance records…</div> : null}
         </>
-      )}
+      )}</>}
       {action && (
         <Modal
           title={action === "check-in" ? "Check in" : "Check out"}

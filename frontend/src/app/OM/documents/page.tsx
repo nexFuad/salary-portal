@@ -5,6 +5,7 @@ import {
   Trash2,
   Upload,
   Eye,
+  Search,
   LoaderCircle,
   ExternalLink,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import Modal from "@/Components/Shared/Modal";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { documentService } from "@/Services/document.services";
 import type { UserDocument } from "@/Types/om";
 
@@ -44,6 +46,7 @@ const statusClass = (status: UserDocument["status"]) =>
 
 export default function OmDocumentsPage() {
   const queryClient = useQueryClient();
+  const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<UserDocument | null>(
@@ -60,8 +63,8 @@ export default function OmDocumentsPage() {
     description: "",
   });
   const documentsQuery = useQuery({
-    queryKey: ["documents"],
-    queryFn: documentService.list,
+    queryKey: ["documents", searchQuery],
+    queryFn: () => documentService.list({ search: searchQuery || undefined }),
   });
   const documents = documentsQuery.data ?? [];
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(documents);
@@ -104,6 +107,7 @@ export default function OmDocumentsPage() {
         </button>
       }
     >
+      <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents" className="min-w-0 flex-1 text-sm outline-none" /></label>
       {documentsQuery.isPending || documentsQuery.isError ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (

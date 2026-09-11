@@ -97,9 +97,30 @@ function profileData(input: Omit<EmployeeInput, "password">) {
   };
 }
 
-export async function listEmployees(company: string) {
+export type EmployeeListFilters = {
+  search?: string;
+  department?: string;
+  status?: "Active" | "Suspended";
+};
+
+export async function listEmployees(
+  company: string,
+  filters: EmployeeListFilters = {},
+) {
+  const search = filters.search?.trim();
   return prisma.user.findMany({
-    where: { company },
+    where: {
+      company,
+      ...(filters.department ? { department: filters.department } : {}),
+      ...(filters.status ? { accountStatus: filters.status } : {}),
+      ...(search
+        ? {
+            OR: ["name", "email", "employeeId", "phone"].map((field) => ({
+              [field]: { contains: search, mode: "insensitive" },
+            })),
+          }
+        : {}),
+    },
     select: employeeSelect,
     orderBy: [{ name: "asc" }, { createdAt: "desc" }],
   });

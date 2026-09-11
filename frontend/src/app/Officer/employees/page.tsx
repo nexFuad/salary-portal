@@ -25,6 +25,7 @@ import Pagination from "@/Components/Shared/Pagination";
 import Table, { type TableColumn } from "@/Components/Shared/Table";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { employeeService } from "@/Services/employee.services";
 import type { EmployeeRecord } from "@/Types/employee";
 
@@ -60,7 +61,7 @@ function formatMoney(value: string | null) {
 
 export default function EmployeesPage() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const { query, setQuery, searchQuery } = useSearchBar();
   const [department, setDepartment] = useState("All departments");
   const [status, setStatus] = useState("All statuses");
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,8 +73,14 @@ export default function EmployeesPage() {
   const [actionError, setActionError] = useState("");
   const queryClient = useQueryClient();
   const employeeQuery = useQuery({
-    queryKey: ["officer-employees"],
-    queryFn: employeeService.list,
+    queryKey: ["officer-employees", searchQuery, department, status],
+    queryFn: () =>
+      employeeService.list({
+        search: searchQuery || undefined,
+        department:
+          department === "All departments" ? undefined : department,
+        status: status === "All statuses" ? undefined : status,
+      }),
   });
   const employees = useMemo(
     () => employeeQuery.data ?? [],
@@ -121,37 +128,8 @@ export default function EmployeesPage() {
       ] as string[],
     [employees],
   );
-  const statuses = useMemo(
-    () =>
-      [
-        ...new Set(
-          employees.map((employee) => employee.accountStatus).filter(Boolean),
-        ),
-      ] as string[],
-    [employees],
-  );
-  const filteredEmployees = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    return employees.filter((employee) => {
-      const text = [
-        employee.name,
-        employee.email,
-        employee.employeeId,
-        employee.department,
-        employee.designation,
-        employee.role,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return (
-        (!search || text.includes(search)) &&
-        (department === "All departments" ||
-          employee.department === department) &&
-        (status === "All statuses" || employee.accountStatus === status)
-      );
-    });
-  }, [department, employees, query, status]);
+  const statuses = ["Active", "Suspended"];
+  const filteredEmployees = employees;
   const totalPages = Math.max(
     1,
     Math.ceil(filteredEmployees.length / pageSize),

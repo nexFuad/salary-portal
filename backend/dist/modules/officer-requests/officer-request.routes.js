@@ -53,12 +53,26 @@ routes.delete("/attendance/:id", async (c) => {
         ? c.json({ message: "Attendance deleted" })
         : c.json({ message: "Attendance not found" }, 404);
 });
-routes.get("/documents", async (c) => c.json({
-    documents: await prisma.userDocument.findMany({
-        include: { user },
-        orderBy: { createdAt: "desc" },
-    }),
-}));
+routes.get("/documents", async (c) => {
+    const search = c.req.query("search")?.trim();
+    return c.json({
+        documents: await prisma.userDocument.findMany({
+            where: search
+                ? {
+                    OR: [
+                        { title: { contains: search, mode: "insensitive" } },
+                        { documentType: { contains: search, mode: "insensitive" } },
+                        { fileName: { contains: search, mode: "insensitive" } },
+                        { user: { name: { contains: search, mode: "insensitive" } } },
+                        { user: { employeeId: { contains: search, mode: "insensitive" } } },
+                    ],
+                }
+                : undefined,
+            include: { user },
+            orderBy: { createdAt: "desc" },
+        }),
+    });
+});
 routes.post("/documents", async (c) => {
     const b = (await c.req.json().catch(() => null));
     if (!b?.title ||

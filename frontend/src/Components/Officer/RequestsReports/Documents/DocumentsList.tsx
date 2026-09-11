@@ -78,21 +78,13 @@ export default function DocumentsList() {
     documentType: documentTypes[0],
     description: "",
   });
+  const { query, setQuery, searchQuery } = useSearchBar();
   const documentsQuery = useQuery({
-    queryKey: ["officer-documents"],
-    queryFn: officerDocumentService.list,
+    queryKey: ["officer-documents", searchQuery],
+    queryFn: () =>
+      officerDocumentService.list({ search: searchQuery || undefined }),
   });
   const documents = documentsQuery.data ?? [];
-  const { query, setQuery, filteredData } = useSearchBar({
-    data: documents,
-    searchFields: [
-      "title",
-      "documentType",
-      "fileName",
-      (document) => document.user.name,
-      (document) => document.user.employeeId,
-    ],
-  });
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file.");
@@ -127,9 +119,9 @@ export default function DocumentsList() {
       queryClient.invalidateQueries({ queryKey: ["officer-documents"] }),
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(documents.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const rows = filteredData.slice(
+  const rows = documents.slice(
     (safePage - 1) * pageSize,
     safePage * pageSize,
   );
@@ -265,7 +257,7 @@ export default function DocumentsList() {
 
       <Pagination
         currentPage={safePage}
-        totalItems={filteredData.length}
+        totalItems={documents.length}
         pageSize={pageSize}
         onPageChange={setPage}
         className="pb-8"

@@ -22,10 +22,10 @@ export const attendanceService = {
     }>("/current");
     return response.data.attendance;
   },
-  async list() {
+  async list(filters?: { search?: string }) {
     const response = await attendanceApi.get<{
       attendance: AttendanceRecord[];
-    }>("/list");
+    }>("/list", { params: filters });
     return response.data.attendance;
   },
   async checkIn(data: AttendanceSubmission) {

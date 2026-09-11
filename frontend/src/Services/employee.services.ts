@@ -8,9 +8,16 @@ const employeeApi = axios.create({
 });
 
 export const employeeService = {
-  list: async () =>
-    (await employeeApi.get<{ employees: EmployeeRecord[] }>("/list")).data
-      .employees,
+  list: async (filters?: {
+    search?: string;
+    department?: string;
+    status?: string;
+  }) =>
+    (
+      await employeeApi.get<{ employees: EmployeeRecord[] }>("/list", {
+        params: filters,
+      })
+    ).data.employees,
   getById: async (id: string) =>
     (await employeeApi.get<{ employee: EmployeeRecord }>(`/${id}`)).data
       .employee,

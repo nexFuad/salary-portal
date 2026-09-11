@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
+import { CalendarPlus, Pencil, Search, Trash2 } from "lucide-react";
 import LeaveRequestForm from "@/Components/OM/LeaveRequestForm";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
 import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { leaveRequestService } from "@/Services/leave-request.services";
 import type { LeaveRequest } from "@/Types/leave-request";
 
@@ -27,6 +28,7 @@ const statusClass = (status: LeaveRequest["status"]) =>
 
 export default function LeaveRequestPage() {
   const queryClient = useQueryClient();
+  const { query, setQuery, searchQuery } = useSearchBar();
   const [openRequestId, setOpenRequestId] = useState<string | null | undefined>(
     undefined,
   );
@@ -38,8 +40,8 @@ export default function LeaveRequestPage() {
     isPending,
     isError,
   } = useQuery({
-    queryKey: ["leave-requests"],
-    queryFn: leaveRequestService.list,
+    queryKey: ["leave-requests", searchQuery],
+    queryFn: () => leaveRequestService.list({ search: searchQuery || undefined }),
   });
   const deleteMutation = useMutation({
     mutationFn: leaveRequestService.remove,
@@ -66,6 +68,10 @@ export default function LeaveRequestPage() {
         </button>
       }
     >
+      <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+        <Search className="size-4 text-slate-400" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search leave requests" className="min-w-0 flex-1 text-sm outline-none" />
+      </label>
       {isPending || isError ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
