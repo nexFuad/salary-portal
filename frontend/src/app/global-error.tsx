@@ -25,6 +25,9 @@ export default function GlobalError({
           retry={retry}
           digest={error.digest}
         />
+
+
+        
       </body>
     </html>
   );
