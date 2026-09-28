@@ -1,6 +1,7 @@
-import axios from "axios";
+import { createAuthenticatedApi } from "@/Services/authenticated-api";
 import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AttendanceRecord } from "@/Types/attendance";
+import type { PageFilters, PageResult } from "@/Types/pagination";
 
 export type AttendanceSubmission = {
   photoUrl: string;
@@ -9,7 +10,7 @@ export type AttendanceSubmission = {
   attendanceTime: string;
 };
 
-const attendanceApi = axios.create({
+const attendanceApi = createAuthenticatedApi({
   baseURL: `${apiBaseUrl}/api/attendance`,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
@@ -22,10 +23,14 @@ export const attendanceService = {
     }>("/current");
     return response.data.attendance;
   },
-  async list(filters?: { search?: string }) {
+  async list(filters: PageFilters): Promise<PageResult<AttendanceRecord>> {
     const response = await attendanceApi.get<{
-      attendance: AttendanceRecord[];
+      attendance: AttendanceRecord[]; total: number; page: number; pageSize: number;
     }>("/list", { params: filters });
+    return { items: response.data.attendance, total: response.data.total, page: response.data.page, pageSize: response.data.pageSize };
+  },
+  async listAll() {
+    const response = await attendanceApi.get<{ attendance: AttendanceRecord[] }>("/list");
     return response.data.attendance;
   },
   async checkIn(data: AttendanceSubmission) {

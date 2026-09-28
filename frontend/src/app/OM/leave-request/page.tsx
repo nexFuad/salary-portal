@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, Pencil, Search, Trash2 } from "lucide-react";
 import LeaveRequestForm from "@/Components/OM/LeaveRequestForm";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
 import Modal from "@/Components/Shared/Modal";
-import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import LoadMoreStatus from "@/Components/Shared/LoadMoreStatus";
+import DataLoadError from "@/Components/Shared/DataLoadError";
+import { useLoadMoreOnScroll } from "@/Hooks/useLoadMoreOnScroll";
 import { useSearchBar } from "@/Hooks/useSearchBar";
 import { leaveRequestService } from "@/Services/leave-request.services";
 import type { LeaveRequest } from "@/Types/leave-request";
@@ -29,6 +31,7 @@ const statusClass = (status: LeaveRequest["status"]) =>
 export default function LeaveRequestPage() {
   const queryClient = useQueryClient();
   const { query, setQuery, searchQuery } = useSearchBar();
+  const pageSize = 10;
   const [openRequestId, setOpenRequestId] = useState<string | null | undefined>(
     undefined,
   );
@@ -36,13 +39,22 @@ export default function LeaveRequestPage() {
     null,
   );
   const {
-    data: requests = [],
+    data,
     isPending,
     isError,
-  } = useQuery({
+    isFetchNextPageError,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
     queryKey: ["leave-requests", searchQuery],
-    queryFn: () => leaveRequestService.list({ search: searchQuery || undefined }),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => leaveRequestService.list({ search: searchQuery || undefined, page: pageParam, pageSize }),
+    getNextPageParam: (lastPage, pages) => pages.length * pageSize < lastPage.total ? pages.length + 1 : undefined,
   });
+  const requests = data?.pages.flatMap((result) => result.items) ?? [];
+  const sentinelRef = useLoadMoreOnScroll(Boolean(hasNextPage) && !isFetchingNextPage && !isFetchNextPageError, () => { void fetchNextPage(); });
   const deleteMutation = useMutation({
     mutationFn: leaveRequestService.remove,
     onSuccess: async () => {
@@ -50,8 +62,6 @@ export default function LeaveRequestPage() {
       setRequestToDelete(null);
     },
   });
-  const { visibleItems: visibleRequests, hasMore, sentinelRef } =
-    useInfiniteScroll(requests);
   return (
     <OmPageShell
       title="Leave requests"
@@ -72,7 +82,9 @@ export default function LeaveRequestPage() {
         <Search className="size-4 text-slate-400" />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search leave requests" className="min-w-0 flex-1 text-sm outline-none" />
       </label>
-      {isPending || isError ? (
+      {isError && !data ? (
+        <DataLoadError retry={() => void refetch()} />
+      ) : isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
@@ -88,7 +100,7 @@ export default function LeaveRequestPage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-            {visibleRequests.map((request) => {
+            {requests.map((request) => {
               const isPending = request.status === "PENDING";
               return (
                 <article
@@ -153,14 +165,9 @@ export default function LeaveRequestPage() {
               );
             })}
           </div>
-          {hasMore ? (
-            <div
-              ref={sentinelRef}
-              className="py-8 text-center text-sm font-medium text-slate-400"
-            >
-              Loading more leave requests…
-            </div>
-          ) : null}
+          <div ref={sentinelRef} className="min-h-6">
+            <LoadMoreStatus loading={isFetchingNextPage} error={isFetchNextPageError} onRetry={() => void fetchNextPage()} />
+          </div>
         </>
       )}
       {openRequestId !== undefined && (

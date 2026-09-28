@@ -5,11 +5,12 @@ import { X } from "lucide-react";
 
 type ModalProps = {
   title: string;
+  description?: string;
   children: ReactNode;
   onClose: () => void;
 };
 
-export default function Modal({ title, children, onClose }: ModalProps) {
+export default function Modal({ title, description = "Fill in the details below and submit your request.", children, onClose }: ModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end bg-slate-950/35 sm:items-center sm:justify-center sm:p-6"
@@ -28,7 +29,7 @@ export default function Modal({ title, children, onClose }: ModalProps) {
           <div>
             <h2 className="text-lg font-bold text-slate-800">{title}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Fill in the details below and submit your request.
+              {description}
             </p>
           </div>
           <button

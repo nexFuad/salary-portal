@@ -2,6 +2,13 @@ import type { AttendanceRecord } from "./attendance";
 import type { LeaveRequest } from "./leave-request";
 import type { Loan, SalaryAdvance, UserDocument } from "./om";
 
+export type OfficerPage<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type OfficerRequestUser = {
   name: string | null;
   employeeId: string;

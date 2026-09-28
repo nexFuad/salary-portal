@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { AppEnv } from "../auth/auth.types.js";
+import { readPagination } from "../../lib/pagination.js";
 import {
   createLeaveRequest,
   deleteLeaveRequest,
@@ -44,8 +45,10 @@ function normalizedInput(
 }
 
 export async function list(c: Context<AppEnv>) {
-  const requests = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"));
-  return c.json({ requests });
+  const paging = readPagination(c);
+  if (paging === false) return c.json({ message: "Invalid page or pageSize" }, 400);
+  const { requests, total } = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"), paging ?? undefined);
+  return c.json({ requests, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? requests.length });
 }
 
 export async function getById(c: Context<AppEnv>) {

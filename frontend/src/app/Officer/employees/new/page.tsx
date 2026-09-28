@@ -3,99 +3,26 @@
 import axios from "axios";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, Save } from "lucide-react";
 import { employeeService } from "@/Services/employee.services";
 import { uploadProfilePhoto } from "@/Services/upload.services";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
-import type { EmployeeInput, EmployeeRecord } from "@/Types/employee";
-
-const emptyForm: EmployeeInput = {
-  name: "",
-  email: "",
-  password: "",
-  phone: "",
-  profilePic: "",
-  dateOfBirth: "",
-  gender: "",
-  role: "OM",
-  accountStatus: "Active",
-  employeeId: "",
-  department: "",
-  designation: "",
-  employmentType: "Full Time",
-  workDaysPerWeek: "5",
-  workStartTime: "09:00",
-  workEndTime: "15:00",
-  joinDate: "",
-  employmentStatus: "Active",
-  basicSalary: "",
-  salaryType: "Monthly",
-  allowances: "",
-  attendanceBonusThreshold: "",
-  attendanceBonusRate: "5",
-  effectiveSalaryDate: "",
-  address: "",
-  city: "",
-  country: "",
-  emergencyContactName: "",
-  emergencyContactPhone: "",
-  manager: "",
-  workLocation: "Office",
-};
-
-function dateValue(value: string | null) {
-  return value?.slice(0, 10) ?? "";
-}
-
-function toForm(employee: EmployeeRecord): EmployeeInput {
-  return {
-    ...emptyForm,
-    name: employee.name ?? "",
-    email: employee.email ?? "",
-    phone: employee.phone ?? "",
-    profilePic: employee.profilePic ?? "",
-    gender: employee.gender ?? "",
-    role: employee.role,
-    accountStatus: employee.accountStatus ?? "Active",
-    employeeId: employee.employeeId,
-    department: employee.department ?? "",
-    designation: employee.designation ?? "",
-    employmentType: employee.employmentType ?? "Full Time",
-    workDaysPerWeek: employee.workDaysPerWeek?.toString() ?? "5",
-    workStartTime: employee.workStartTime ?? "09:00",
-    workEndTime: employee.workEndTime ?? "15:00",
-    employmentStatus: employee.employmentStatus ?? "Active",
-    salaryType: employee.salaryType ?? "Monthly",
-    address: employee.address ?? "",
-    city: employee.city ?? "",
-    country: employee.country ?? "",
-    emergencyContactName: employee.emergencyContactName ?? "",
-    emergencyContactPhone: employee.emergencyContactPhone ?? "",
-    manager: employee.manager ?? "",
-    workLocation: employee.workLocation ?? "Office",
-    password: "",
-    dateOfBirth: dateValue(employee.dateOfBirth),
-    joinDate: dateValue(employee.joinDate),
-    effectiveSalaryDate: dateValue(employee.effectiveSalaryDate),
-    basicSalary: employee.basicSalary ?? "",
-    allowances: employee.allowances ?? "",
-    attendanceBonusThreshold: employee.attendanceBonusThreshold ?? "",
-    attendanceBonusRate: employee.attendanceBonusRate ?? "5",
-  };
-}
+import { emptyForm, toForm } from "@/Types/employee";
+import type {
+  EmployeeFormFieldProps,
+  EmployeeFormSectionProps,
+  EmployeeInput,
+} from "@/Types/employee";
 
 const textInput =
   "mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-[#17665c] focus:ring-2 focus:ring-[#17665c]/10";
 
-export default function NewEmployeePage({
-  employeeId,
-}: {
-  employeeId?: string;
-}) {
+function EmployeeForm() {
+  const employeeId = useSearchParams().get("employeeId") ?? undefined;
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEditing = Boolean(employeeId);
@@ -568,10 +495,7 @@ export default function NewEmployeePage({
 function FormSection({
   title,
   children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+}: EmployeeFormSectionProps) {
   return (
     <fieldset className="mt-7">
       <legend className="text-base font-bold text-slate-800">{title}</legend>
@@ -585,17 +509,20 @@ function Field({
   children,
   required,
   className = "",
-}: {
-  label: string;
-  children: ReactNode;
-  required?: boolean;
-  className?: string;
-}) {
+}: EmployeeFormFieldProps) {
   return (
     <label className={`text-sm font-medium text-slate-700 ${className}`}>
       {label}
       {required ? <span className="ml-1 text-rose-500">*</span> : null}
       {children}
     </label>
+  );
+}
+
+export default function NewEmployeePage() {
+  return (
+    <Suspense fallback={<TableSkeleton rows={6} />}>
+      <EmployeeForm />
+    </Suspense>
   );
 }

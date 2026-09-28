@@ -27,12 +27,13 @@ export type AuthResponse = {
 export type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
+  isAuthError: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
 
-export const dashboardPathByRole: Record<UserRole, "/Officer" | "/OM"> = {
+export const dashboardPathByRole: Record<UserRole, "/Officer" | "/OM/dashboard"> = {
   OFFICER: "/Officer",
-  OM: "/OM",
+  OM: "/OM/dashboard",
 };

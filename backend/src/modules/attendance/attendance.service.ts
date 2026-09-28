@@ -34,13 +34,16 @@ export async function getCurrentAttendance(userId: string) {
   });
 }
 
-export async function listAttendance(userId: string, search?: string) {
+export async function listAttendance(userId: string, search?: string, paging?: { skip: number; pageSize: number }) {
   const term = search?.trim();
-  return prisma.attendanceRecord.findMany({
-    where: term ? { userId, OR: [{ shiftStartTime: { contains: term } }, { shiftEndTime: { contains: term } }] } : { userId },
+  const where = term ? { userId, OR: [{ shiftStartTime: { contains: term } }, { shiftEndTime: { contains: term } }] } : { userId };
+  const [attendance, total] = await Promise.all([prisma.attendanceRecord.findMany({
+    where,
     select: attendanceSelect,
-    orderBy: { workDate: "desc" },
-  });
+    orderBy: [{ workDate: "desc" }, { id: "desc" }],
+    ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}),
+  }), prisma.attendanceRecord.count({ where })]);
+  return { attendance, total };
 }
 
 export async function checkIn(

@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import type { AppEnv } from "../auth/auth.types.js";
 
@@ -57,52 +58,93 @@ function round(value: number) {
 
 export async function list(c: Context<AppEnv>) {
   const payRunMonth = c.req.query("payRunMonth");
-  const range = payRunMonth ? payrollMonthRange(payRunMonth) : null;
-  if (payRunMonth && !range) {
+  const range = payrollMonthRange(payRunMonth);
+  if (!range) {
     return c.json(
       { message: "Choose a valid payroll month in YYYY-MM format." },
       400,
     );
   }
+  const now = new Date();
+  const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  if (range.payRun >= currentMonthStart) {
+    return c.json({ message: "Choose a month before the current month." }, 400);
+  }
+
+  const page = Number(c.req.query("page") ?? 1);
+  const pageSize = Number(c.req.query("pageSize") ?? 10);
+  if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100 || (page - 1) * pageSize > 2_147_483_647) {
+    return c.json({ message: "Page must be positive and pageSize must be between 1 and 100." }, 400);
+  }
 
   const company = c.get("authUser").company;
-  const records = await prisma.payrollRecord.findMany({
-    where: range
-      ? {
-          payRunMonth: range.payRun,
-          user: {
-            company,
-            basicSalary: { not: null },
-            attendanceRecords: {
-              some: {
-                workDate: { gte: range.start, lte: range.end },
-              },
-            },
+  const department = c.req.query("department")?.trim();
+  const status = c.req.query("status")?.trim();
+  const search = c.req.query("search")?.trim();
+  const userWhere: Prisma.UserWhereInput = {
+    company,
+    accountStatus: "Active",
+    ...(department ? { department } : {}),
+    ...(search ? {
+      OR: ["name", "email", "employeeId", "department"].map((field) => ({
+        [field]: { contains: search, mode: "insensitive" },
+      })),
+    } : {}),
+  };
+  const where: Prisma.PayrollRecordWhereInput = {
+    payRunMonth: range.payRun,
+    user: userWhere,
+    ...(status ? { status } : {}),
+  };
+  const [records, total, monthTotal, departments, statuses] = await Promise.all([
+    prisma.payrollRecord.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            employeeId: true,
+            profilePic: true,
+            department: true,
+            designation: true,
           },
-        }
-      : { user: { company } },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          employeeId: true,
-          profilePic: true,
-          department: true,
-          designation: true,
         },
       },
-    },
-    orderBy: [{ payRunMonth: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.payrollRecord.count({ where }),
+    prisma.payrollRecord.count({
+      where: { payRunMonth: range.payRun, user: { company, accountStatus: "Active" } },
+    }),
+    prisma.user.findMany({
+      where: { company, accountStatus: "Active", department: { not: null }, payrollRecords: { some: { payRunMonth: range.payRun } } },
+      select: { department: true },
+      distinct: ["department"],
+      orderBy: { department: "asc" },
+    }),
+    prisma.payrollRecord.findMany({
+      where: { payRunMonth: range.payRun, user: { company, accountStatus: "Active" } },
+      select: { status: true },
+      distinct: ["status"],
+      orderBy: { status: "asc" },
+    }),
+  ]);
+  return c.json({
+    records,
+    total,
+    monthTotal,
+    page,
+    pageSize,
+    departments: departments.map((record) => record.department).filter((value): value is string => Boolean(value)),
+    statuses: statuses.map((record) => record.status),
   });
-  return c.json({ records });
 }
 
 export async function generate(c: Context<AppEnv>) {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    payRunMonth?: unknown;
-  };
-  const range = payrollMonthRange(body.payRunMonth);
+  const range = payrollMonthRange();
   if (!range)
     return c.json(
       { message: "Choose a valid payroll month in YYYY-MM format." },
@@ -113,12 +155,6 @@ export async function generate(c: Context<AppEnv>) {
     where: {
       company,
       accountStatus: "Active",
-      basicSalary: { not: null },
-      attendanceRecords: {
-        some: {
-          workDate: { gte: range.start, lte: range.end },
-        },
-      },
     },
     select: {
       id: true,
@@ -192,50 +228,51 @@ export async function generate(c: Context<AppEnv>) {
         basicSalary + bonusAmount + overtimeAmount - deductionAmount,
       );
 
-      return prisma.payrollRecord.upsert({
+      const values = {
+          periodStart: range.start,
+          periodEnd: range.end,
+          expectedWorkDays,
+          attendedDays: attendanceDays,
+          basicSalary: String(round(basicSalary)),
+          bonusAmount: String(round(bonusAmount)),
+          expectedWorkHours: String(round(expectedWorkHours)),
+          workedHours: String(round(workedHours)),
+          overtimeHours: String(round(overtimeHours)),
+          shortHours: String(round(shortHours)),
+          overtimeAmount: String(round(overtimeAmount)),
+          deductionAmount: String(round(deductionAmount)),
+          netSalary: String(round(netSalary)),
+      };
+      const updated = await prisma.payrollRecord.updateMany({
         where: {
-          userId_payRunMonth: { userId: user.id, payRunMonth: range.payRun },
-        },
-        create: {
           userId: user.id,
           payRunMonth: range.payRun,
-          periodStart: range.start,
-          periodEnd: range.end,
-          expectedWorkDays,
-          attendedDays: attendanceDays,
-          basicSalary: String(round(basicSalary)),
-          bonusAmount: String(round(bonusAmount)),
-          expectedWorkHours: String(round(expectedWorkHours)),
-          workedHours: String(round(workedHours)),
-          overtimeHours: String(round(overtimeHours)),
-          shortHours: String(round(shortHours)),
-          overtimeAmount: String(round(overtimeAmount)),
-          deductionAmount: String(round(deductionAmount)),
-          netSalary: String(round(netSalary)),
+          status: "Pending approval",
         },
-        update: {
-          periodStart: range.start,
-          periodEnd: range.end,
-          expectedWorkDays,
-          attendedDays: attendanceDays,
-          basicSalary: String(round(basicSalary)),
-          bonusAmount: String(round(bonusAmount)),
-          expectedWorkHours: String(round(expectedWorkHours)),
-          workedHours: String(round(workedHours)),
-          overtimeHours: String(round(overtimeHours)),
-          shortHours: String(round(shortHours)),
-          overtimeAmount: String(round(overtimeAmount)),
-          deductionAmount: String(round(deductionAmount)),
-          netSalary: String(round(netSalary)),
-        },
+        data: values,
       });
+      if (updated.count) return true;
+
+      try {
+        await prisma.payrollRecord.create({
+          data: { userId: user.id, payRunMonth: range.payRun, ...values },
+        });
+        return true;
+      } catch (error) {
+        if (typeof error === "object" && error && "code" in error && error.code === "P2002") {
+          return false;
+        }
+        throw error;
+      }
     }),
   );
 
+  const generatedCount = results.filter(Boolean).length;
   return c.json(
     {
-      records: results,
-      message: `Payroll generated for ${results.length} employees for ${range.payRun.toLocaleDateString("en", { month: "long", year: "numeric", timeZone: "UTC" })}.`,
+      payRunMonth: range.payRun.toISOString().slice(0, 7),
+      generatedCount,
+      message: `Payroll generated for ${generatedCount} employees for ${range.payRun.toLocaleDateString("en", { month: "long", year: "numeric", timeZone: "UTC" })}.`,
     },
     201,
   );

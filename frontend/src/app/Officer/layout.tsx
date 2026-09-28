@@ -14,13 +14,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/Hooks/useAuth";
+import ProtectedDashboard from "@/Components/Shared/ProtectedDashboard";
 
 type OfficerLayoutProps = { children: ReactNode };
 
 const navigationItems = [
   {
     label: "Dashboard",
-    href: "/Officer/dashboard",
+    href: "/Officer",
     icon: LayoutDashboard,
     enabled: true,
   },
@@ -47,7 +48,7 @@ const navigationItems = [
 function BrandLogo() {
   return (
     <Link
-      href="/Officer/dashboard"
+      href="/Officer"
       className="flex items-center gap-2.5"
       aria-label="SalaryFlow dashboard"
     >
@@ -68,9 +69,12 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   async function handleLogout() {
-    await logout();
-    router.replace("/");
-    router.refresh();
+    try {
+      await logout();
+      router.replace("/Login");
+    } catch {
+      // The shared auth provider displays the logout error.
+    }
   }
 
   function closeSidebar() {
@@ -86,7 +90,7 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#f7f9f9] text-[#202b35]">
+    <ProtectedDashboard role="OFFICER"><div className="min-h-screen bg-[#f7f9f9] text-[#202b35]">
       {isSidebarOpen ? (
         <button
           type="button"
@@ -97,11 +101,11 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[260px] flex-col border-r border-[#e6ebeb] bg-white transition-transform lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-65 flex-col border-r border-[#e6ebeb] bg-white transition-transform lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#e6ebeb] px-4 lg:px-5">
+        <div className="flex h-18 shrink-0 items-center justify-between border-b border-[#e6ebeb] px-4 lg:px-5">
           <BrandLogo />
           <button
             type="button"
@@ -170,8 +174,8 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
         </div>
       </aside>
 
-      <div className="lg:pl-[260px]">
-        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-[#e6ebeb] bg-white lg:h-[72px]">
+      <div className="lg:pl-65">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-[#e6ebeb] bg-white lg:h-18">
           <div className="flex w-full items-center justify-between px-4 sm:px-7">
             <div className="lg:hidden">
               <BrandLogo />
@@ -219,6 +223,6 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
           {children}
         </main>
       </div>
-    </div>
+    </div></ProtectedDashboard>
   );
 }

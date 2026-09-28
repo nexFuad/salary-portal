@@ -29,13 +29,16 @@ export async function getCurrentAttendance(userId) {
         orderBy: { checkInAt: "desc" },
     });
 }
-export async function listAttendance(userId, search) {
+export async function listAttendance(userId, search, paging) {
     const term = search?.trim();
-    return prisma.attendanceRecord.findMany({
-        where: term ? { userId, OR: [{ shiftStartTime: { contains: term } }, { shiftEndTime: { contains: term } }] } : { userId },
-        select: attendanceSelect,
-        orderBy: { workDate: "desc" },
-    });
+    const where = term ? { userId, OR: [{ shiftStartTime: { contains: term } }, { shiftEndTime: { contains: term } }] } : { userId };
+    const [attendance, total] = await Promise.all([prisma.attendanceRecord.findMany({
+            where,
+            select: attendanceSelect,
+            orderBy: [{ workDate: "desc" }, { id: "desc" }],
+            ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}),
+        }), prisma.attendanceRecord.count({ where })]);
+    return { attendance, total };
 }
 export async function checkIn(userId, checkInPhotoUrl, shiftStartTime, shiftEndTime, checkInTime) {
     const workDate = startOfToday();

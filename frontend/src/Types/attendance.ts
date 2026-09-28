@@ -15,3 +15,24 @@ export type AttendanceRecord = {
     role: "OM";
   };
 };
+
+export type AttendanceAction = "check-in" | "check-out";
+
+export type AttendanceTab = "current" | "history";
+
+export type AttendanceForm = {
+  shiftStartTime: string;
+  shiftEndTime: string;
+  attendanceTime: string;
+};
+
+export type AttendancePhoto = {
+  file: Blob;
+  previewUrl: string;
+};
+
+export type AttendanceDialogProps = {
+  action: AttendanceAction;
+  currentAttendance: AttendanceRecord | null;
+  onClose: () => void;
+};

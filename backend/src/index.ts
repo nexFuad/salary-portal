@@ -4,6 +4,11 @@ import { cors } from "hono/cors";
 import { Hono } from "hono";
 import type { AppEnv } from "./modules/auth/auth.types.js";
 import apiRoutes from "./routes/index.js";
+import { prisma } from "./lib/prisma.js";
+
+if (process.env.NODE_ENV === "production" && !process.env.AUTH_JWT_SECRET) {
+  throw new Error("AUTH_JWT_SECRET is required in production");
+}
 
 const fallbackOrigin = "http://localhost:3000";
 
@@ -33,7 +38,21 @@ app.use(
 
 app.get("/", (c) => c.json({ message: "Salary Portal API is running" }));
 app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/health/database", async (c) => {
+  try {
+    await prisma.user.count();
+    return c.json({ status: "ok" });
+  } catch (error) {
+    console.error("Database health check failed", error);
+    return c.json({ status: "unavailable" }, 503);
+  }
+});
 app.route("/api", apiRoutes);
+
+app.onError((error, c) => {
+  console.error("Unhandled API error", error);
+  return c.json({ message: "An unexpected server error occurred." }, 500);
+});
 
 serve(
   {

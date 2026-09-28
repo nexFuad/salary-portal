@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CalendarX2,
   Download,
   Eye,
-  ListFilter,
   LoaderCircle,
   Pencil,
   PlayCircle,
@@ -16,28 +16,30 @@ import {
 import { jsPDF } from "jspdf";
 import ActionMenu from "@/Components/Shared/ActionMenu";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
-import Modal from "@/Components/Shared/Modal";
+import { PayrollDetailsDialog, PayrollStatusDialog } from "@/Components/Officer/payroledialoge";
 import Pagination from "@/Components/Shared/Pagination";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import Table, { type TableColumn } from "@/Components/Shared/Table";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
+import DataLoadError from "@/Components/Shared/DataLoadError";
+import { useSearchBar } from "@/Hooks/useSearchBar";
 import { payrollService } from "@/Services/payroll.services";
 import type { PayrollRecord } from "@/Types/payroll";
+import OfficerHeader from "@/Components/Officer/OfficerHeader";
 
 const pageSize = 10;
-const currentMonth = new Date().toISOString().slice(0, 7);
-const defaultPayrollMonth = (() => {
+function previousPayrollMonth() {
   const today = new Date();
   return new Date(
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1),
   )
     .toISOString()
     .slice(0, 7);
-})();
+}
 const money = (value: string) =>
   `৳${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const dateMonth = (value: string) =>
-  new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(
+  new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(value),
   );
 const tone = (status: string) =>
@@ -49,24 +51,40 @@ const tone = (status: string) =>
 
 export default function PayrollPage() {
   const queryClient = useQueryClient();
-  const [query, setQuery] = useState("");
+  const { query, setQuery, searchQuery } = useSearchBar();
   const [department, setDepartment] = useState("All departments");
   const [status, setStatus] = useState("All statuses");
-  const [payrollMonth, setPayrollMonth] = useState(defaultPayrollMonth);
+  const [payrollMonth, setPayrollMonth] = useState(previousPayrollMonth);
+  const latestPayrollMonth = previousPayrollMonth();
   const [page, setPage] = useState(1);
   const [details, setDetails] = useState<PayrollRecord | null>(null);
   const [editing, setEditing] = useState<PayrollRecord | null>(null);
   const [deleting, setDeleting] = useState<PayrollRecord | null>(null);
   const [message, setMessage] = useState("");
   const listQuery = useQuery({
-    queryKey: ["payroll", payrollMonth],
-    queryFn: () => payrollService.list(payrollMonth),
+    queryKey: ["payroll", payrollMonth, searchQuery, department, status, page],
+    queryFn: () => payrollService.list({
+      payRunMonth: payrollMonth,
+      search: searchQuery || undefined,
+      department: department === "All departments" ? undefined : department,
+      status: status === "All statuses" ? undefined : status,
+      page,
+      pageSize,
+    }),
   });
-  const records = useMemo(() => listQuery.data ?? [], [listQuery.data]);
+  const rows = listQuery.data?.records ?? [];
+  const totalRecords = listQuery.data?.total ?? 0;
+  const departments = listQuery.data?.departments ?? [];
+  const statuses = listQuery.data?.statuses ?? [];
   const generateMutation = useMutation({
-    mutationFn: () => payrollService.generate(payrollMonth),
+    mutationFn: payrollService.generate,
     onSuccess: async (result) => {
       setMessage(result.message);
+      setPayrollMonth(result.payRunMonth);
+      setQuery("");
+      setDepartment("All departments");
+      setStatus("All statuses");
+      setPage(1);
       await queryClient.invalidateQueries({ queryKey: ["payroll"] });
     },
     onError: () =>
@@ -75,8 +93,11 @@ export default function PayrollPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, nextStatus }: { id: string; nextStatus: string }) =>
       payrollService.updateStatus(id, nextStatus),
-    onSuccess: async () => {
+    onSuccess: async (_result, variables) => {
       setEditing(null);
+      if (status !== "All statuses" && variables.nextStatus !== status && rows.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      }
       await queryClient.invalidateQueries({ queryKey: ["payroll"] });
     },
   });
@@ -84,59 +105,11 @@ export default function PayrollPage() {
     mutationFn: payrollService.remove,
     onSuccess: async () => {
       setDeleting(null);
+      if (rows.length === 1 && page > 1) setPage((current) => current - 1);
       await queryClient.invalidateQueries({ queryKey: ["payroll"] });
     },
   });
 
-  const selectedMonthRecords = useMemo(
-    () =>
-      records.filter(
-        (record) => record.payRunMonth.slice(0, 7) === payrollMonth,
-      ),
-    [payrollMonth, records],
-  );
-  const departments = useMemo(
-    () =>
-      [
-        ...new Set(
-          selectedMonthRecords
-            .map((record) => record.user.department)
-            .filter(Boolean),
-        ),
-      ] as string[],
-    [selectedMonthRecords],
-  );
-  const statuses = useMemo(
-    () => [...new Set(selectedMonthRecords.map((record) => record.status))],
-    [selectedMonthRecords],
-  );
-  const filteredRecords = useMemo(
-    () =>
-      selectedMonthRecords.filter((record) => {
-        const matchesSearch = [
-          record.user.name,
-          record.user.email,
-          record.user.employeeId,
-          record.user.department,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query.toLowerCase());
-        return (
-          matchesSearch &&
-          (department === "All departments" ||
-            record.user.department === department) &&
-          (status === "All statuses" || record.status === status)
-        );
-      }),
-    [selectedMonthRecords, query, department, status],
-  );
-  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const rows = filteredRecords.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
   const resetPage = (callback: () => void) => {
     callback();
     setPage(1);
@@ -264,7 +237,7 @@ export default function PayrollPage() {
     const pdf = new jsPDF({ orientation: "landscape" });
     pdf.text("SalaryFlow Payroll", 20, 18);
     let y = 30;
-    filteredRecords.forEach((record) => {
+    rows.forEach((record) => {
       if (y > 190) {
         pdf.addPage();
         y = 20;
@@ -281,21 +254,9 @@ export default function PayrollPage() {
 
   return (
     <section className="min-w-0">
-      <div className="border-b border-[#e5ebea] bg-white px-4 py-5 sm:px-6 lg:px-9 lg:py-6">
-        <p className="text-xs text-[#849099]">
-          SalaryFlow <span className="mx-2 text-[#a7afb5]">›</span>
-          <span className="font-semibold text-[#4b5760]">Payroll</span>
-        </p>
-        <h1 className="mt-1.5 text-[24px] font-bold tracking-[-0.035em] text-[#202b35]">
-          Payroll
-        </h1>
-      </div>
+      <OfficerHeader title="Payroll" />
       <div className="border-b border-[#e5ebea] bg-white px-4 py-4 sm:px-6 lg:px-9">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:flex lg:flex-wrap lg:items-center">
-          <ListFilter
-            className="hidden shrink-0 text-[#71808a] sm:block"
-            size={21}
-          />
           <label className="col-span-2 flex h-10 min-w-52.5 items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-65 lg:flex-1">
             <Search size={17} />
             <input
@@ -312,10 +273,17 @@ export default function PayrollPage() {
             <input
               type="month"
               value={payrollMonth}
-              max={currentMonth}
-              onChange={(event) =>
-                resetPage(() => setPayrollMonth(event.target.value || currentMonth))
-              }
+              max={latestPayrollMonth}
+              onChange={(event) => {
+                const selectedMonth = event.target.value;
+                if (!/^\d{4}-\d{2}$/.test(selectedMonth) || selectedMonth > latestPayrollMonth) return;
+                setPayrollMonth(selectedMonth);
+                setQuery("");
+                setDepartment("All departments");
+                setStatus("All statuses");
+                setMessage("");
+                setPage(1);
+              }}
               className="w-full bg-transparent outline-none"
             />
           </label>
@@ -340,10 +308,11 @@ export default function PayrollPage() {
           <button
             type="button"
             onClick={exportPdf}
-            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#dfe6e5] px-3 text-xs font-semibold text-[#52606a]"
+            disabled={rows.length === 0}
+            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#dfe6e5] px-3 text-xs font-semibold text-[#52606a] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download size={16} />
-            Export PDF
+            Export page PDF
           </button>
           <button
             type="button"
@@ -371,19 +340,32 @@ export default function PayrollPage() {
         ) : null}
       </div>
       <div className="mb-5 overflow-hidden bg-white">
-        {listQuery.isPending ? (
+        {listQuery.isError ? (
+          <div className="p-4"><DataLoadError retry={() => void listQuery.refetch()} /></div>
+        ) : listQuery.isPending ? (
           <TableSkeleton rows={8} />
+        ) : listQuery.data?.monthTotal === 0 ? (
+          <div className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center" role="status">
+            <span className="grid size-14 place-items-center rounded-2xl bg-[#e8f2ef] text-[#1d625b]">
+              <CalendarX2 size={27} strokeWidth={1.7} aria-hidden="true" />
+            </span>
+            <h2 className="mt-5 text-lg font-bold text-[#26343c]">No payroll found for {dateMonth(`${payrollMonth}-01`)}</h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-[#77838d]">There are no payroll records for this month. Generate payroll creates records for the previous month.</p>
+          </div>
+        ) : totalRecords === 0 ? (
+          <div className="px-6 py-14 text-center text-sm text-[#77838d]" role="status">
+            No payroll records match your search or filters for {dateMonth(`${payrollMonth}-01`)}.
+          </div>
         ) : (
           <>
             <Table
               columns={columns}
               data={rows}
               getRowId={(record) => record.id}
-              emptyMessage={`No payroll records found for ${dateMonth(`${payrollMonth}-01`)}. Generate payroll to calculate that month's attendance.`}
             />
             <Pagination
-              currentPage={safePage}
-              totalItems={filteredRecords.length}
+              currentPage={page}
+              totalItems={totalRecords}
               pageSize={pageSize}
               onPageChange={setPage}
               className="pb-8"
@@ -392,41 +374,10 @@ export default function PayrollPage() {
         )}
       </div>
       {details ? (
-        <Modal title="Payroll details" onClose={() => setDetails(null)}>
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            {[
-              ["Employee", details.user.name ?? details.user.employeeId],
-              ["Salary month", dateMonth(details.payRunMonth)],
-              [
-                "Attendance",
-                `${details.attendedDays}/${details.expectedWorkDays} days`,
-              ],
-              [
-                "Worked hours",
-                `${details.workedHours}h / ${details.expectedWorkHours}h`,
-              ],
-              [
-                "Overtime",
-                `${details.overtimeHours}h · ${money(details.overtimeAmount)}`,
-              ],
-              [
-                "Short hours",
-                `${details.shortHours}h · -${money(details.deductionAmount)}`,
-              ],
-              ["Attendance allowance", money(details.bonusAmount)],
-              ["Net salary", money(details.netSalary)],
-              ["Status", details.status],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">{label}</p>
-                <p className="mt-1 font-medium text-slate-800">{value}</p>
-              </div>
-            ))}
-          </div>
-        </Modal>
+        <PayrollDetailsDialog record={details} onClose={() => setDetails(null)} />
       ) : null}
       {editing ? (
-        <StatusEditor
+        <PayrollStatusDialog
           record={editing}
           isPending={statusMutation.isPending}
           onClose={() => setEditing(null)}
@@ -445,50 +396,5 @@ export default function PayrollPage() {
         />
       ) : null}
     </section>
-  );
-}
-
-function StatusEditor({
-  record,
-  isPending,
-  onClose,
-  onSave,
-}: {
-  record: PayrollRecord;
-  isPending: boolean;
-  onClose: () => void;
-  onSave: (status: string) => void;
-}) {
-  const [status, setStatus] = useState(record.status);
-  return (
-    <Modal title="Update payroll status" onClose={onClose}>
-      <div className="space-y-5">
-        <ShadcnSelect
-          value={status}
-          onValueChange={setStatus}
-          options={["Pending approval", "Approved", "Paid"].map((value) => ({
-            label: value,
-            value,
-          }))}
-        />
-        <div className="flex gap-3">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onSave(status)}
-            className="rounded-xl bg-[#17665c] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {isPending ? "Saving…" : "Save status"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </Modal>
   );
 }

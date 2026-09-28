@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import OmPageShell from "@/Components/OM/OmPageShell";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import { useAuth } from "@/Hooks/useAuth";
 import { attendanceService } from "@/Services/attendance.services";
 import { leaveRequestService } from "@/Services/leave-request.services";
@@ -44,17 +45,23 @@ export default function DashboardPage() {
     queryFn: async () => {
       const [leave, attendance, documents, advances, loans] = await Promise.all(
         [
-          leaveRequestService.list(),
-          attendanceService.list(),
-          documentService.list(),
-          salaryAdvanceService.list(),
-          loanService.list(),
+          leaveRequestService.listAll(),
+          attendanceService.listAll(),
+          documentService.listAll(),
+          salaryAdvanceService.listAll(),
+          loanService.listAll(),
         ],
       );
       return { leave, attendance, documents, advances, loans };
     },
   });
-  if (dashboard.isPending || dashboard.isError || !dashboard.data)
+  if (dashboard.isError)
+    return (
+      <OmPageShell title="Dashboard" subtitle="Your personal work overview.">
+        <DataLoadError retry={() => void dashboard.refetch()} />
+      </OmPageShell>
+    );
+  if (dashboard.isPending || !dashboard.data)
     return (
       <OmPageShell title="Dashboard" subtitle="Your personal work overview.">
         <TableSkeleton rows={5} />

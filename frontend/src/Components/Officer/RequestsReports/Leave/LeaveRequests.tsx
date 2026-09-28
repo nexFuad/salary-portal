@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import Pagination from "@/Components/Shared/Pagination";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import {
   RequestTableSkeleton,
   SimpleTable,
@@ -15,9 +16,12 @@ const date = (v: string) =>
   new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(v));
 export default function LeaveRequests() {
   const qc = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const q = useQuery({
-    queryKey: ["officer-leave"],
-    queryFn: officerRequestsService.leave,
+    queryKey: ["officer-leave", currentPage],
+    queryFn: () => officerRequestsService.leave(currentPage, pageSize),
+    staleTime: 0,
   });
   const m = useMutation({
     mutationFn: ({
@@ -29,22 +33,16 @@ export default function LeaveRequests() {
     }) => officerRequestsService.setLeave(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["officer-leave"] }),
   });
-  const rows = q.data ?? [];
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedRows = rows.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
+  const rows = q.data?.items ?? [];
+  const total = q.data?.total ?? 0;
+  if (q.isError) return <div className="p-4"><DataLoadError retry={() => void q.refetch()} /></div>;
   return (
     <div>
       <SimpleTable
         className="min-h-[70vh]"
         headers={["Employee", "Type", "Date", "Days", "Status", "Actions"]}
       >
-        {q.isPending ? <RequestTableSkeleton columns={6} /> : paginatedRows.map((r) => {
+        {q.isPending ? <RequestTableSkeleton columns={6} /> : rows.map((r) => {
           const days = Math.max(
             1,
             Math.ceil(
@@ -91,8 +89,8 @@ export default function LeaveRequests() {
         })}
       </SimpleTable>
       <Pagination
-        currentPage={safePage}
-        totalItems={rows.length}
+        currentPage={currentPage}
+        totalItems={total}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         className="pb-8"

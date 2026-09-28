@@ -6,6 +6,7 @@ import DocumentsList from "@/Components/Officer/RequestsReports/Documents/Docume
 import LeaveRequests from "@/Components/Officer/RequestsReports/Leave/LeaveRequests";
 import LoansList from "@/Components/Officer/RequestsReports/Loans/LoansList";
 import SalaryAdvanceRequests from "@/Components/Officer/RequestsReports/SalaryAdvance/SalaryAdvanceRequests";
+import OfficerHeader from "@/Components/Officer/OfficerHeader";
 
 const tabs = [
   { id: "leave", label: "Leave", component: LeaveRequests },
@@ -27,17 +28,7 @@ export default function RequestsReportsPage() {
 
   return (
     <section className="min-w-0">
-      <div className="border-b border-[#e5ebea] bg-white px-4 py-5 sm:px-6 lg:px-9 lg:py-6">
-        <p className="text-xs text-[#849099]">
-          SalaryFlow <span className="mx-2 text-[#a7afb5]">›</span>{" "}
-          <span className="font-semibold text-[#4b5760]">
-            Requests &amp; Reports
-          </span>
-        </p>
-        <h1 className="mt-1.5 text-[24px] font-bold tracking-[-0.035em] text-[#202b35]">
-          Requests &amp; Reports
-        </h1>
-      </div>
+      <OfficerHeader title="Requests & Reports" />
 
       <div className="overflow-x-auto border-b border-[#e5ebea] bg-white">
         <div

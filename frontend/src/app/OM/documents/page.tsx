@@ -6,31 +6,20 @@ import {
   Upload,
   Eye,
   Search,
-  LoaderCircle,
-  ExternalLink,
 } from "lucide-react";
-import Image from "next/image";
-import { useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import OmPageShell from "@/Components/OM/OmPageShell";
-import Modal from "@/Components/Shared/Modal";
+import UploadDocumentDialog from "@/Components/OM/upload-document-dialog";
+import DocumentPreviewDialog from "@/Components/OM/document-preview-dialog";
+import LoadMoreStatus from "@/Components/Shared/LoadMoreStatus";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
-import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
-import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import { useLoadMoreOnScroll } from "@/Hooks/useLoadMoreOnScroll";
 import { useSearchBar } from "@/Hooks/useSearchBar";
 import { documentService } from "@/Services/document.services";
 import type { UserDocument } from "@/Types/om";
 
-const documentTypes = [
-  "Resume/CV",
-  "National ID",
-  "Passport",
-  "Educational Certificate",
-  "Employment Document",
-  "Contract",
-  "Bank Document",
-  "Other",
-];
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -47,7 +36,7 @@ const statusClass = (status: UserDocument["status"]) =>
 export default function OmDocumentsPage() {
   const queryClient = useQueryClient();
   const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pageSize = 10;
   const [open, setOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<UserDocument | null>(
     null,
@@ -55,33 +44,14 @@ export default function OmDocumentsPage() {
   const [documentToDelete, setDocumentToDelete] = useState<UserDocument | null>(
     null,
   );
-  const [file, setFile] = useState<File | null>(null);
-  const [message, setMessage] = useState("");
-  const [form, setForm] = useState({
-    title: "",
-    documentType: "Resume/CV",
-    description: "",
-  });
-  const documentsQuery = useQuery({
+  const documentsQuery = useInfiniteQuery({
     queryKey: ["documents", searchQuery],
-    queryFn: () => documentService.list({ search: searchQuery || undefined }),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => documentService.list({ search: searchQuery || undefined, page: pageParam, pageSize }),
+    getNextPageParam: (lastPage, pages) => pages.length * pageSize < lastPage.total ? pages.length + 1 : undefined,
   });
-  const documents = documentsQuery.data ?? [];
-  const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(documents);
-  const uploadMutation = useMutation({
-    mutationFn: async () => {
-      if (!file) throw new Error("Choose a document to upload.");
-      return documentService.upload(form, file);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      setOpen(false);
-      setFile(null);
-      setForm({ title: "", documentType: "Resume/CV", description: "" });
-    },
-    onError: (error) =>
-      setMessage(error instanceof Error ? error.message : "Upload failed."),
-  });
+  const documents = documentsQuery.data?.pages.flatMap((result) => result.items) ?? [];
+  const sentinelRef = useLoadMoreOnScroll(Boolean(documentsQuery.hasNextPage) && !documentsQuery.isFetchingNextPage && !documentsQuery.isFetchNextPageError, () => { void documentsQuery.fetchNextPage(); });
   const deleteMutation = useMutation({
     mutationFn: documentService.remove,
     onSuccess: async () => {
@@ -96,10 +66,7 @@ export default function OmDocumentsPage() {
       action={
         <button
           type="button"
-          onClick={() => {
-            setMessage("");
-            setOpen(true);
-          }}
+          onClick={() => setOpen(true)}
           className="inline-flex items-center gap-2 rounded-xl bg-[#17665c] px-3.5 py-2.5 text-sm font-semibold text-white"
         >
           <Upload className="size-4" />
@@ -108,7 +75,9 @@ export default function OmDocumentsPage() {
       }
     >
       <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents" className="min-w-0 flex-1 text-sm outline-none" /></label>
-      {documentsQuery.isPending || documentsQuery.isError ? (
+      {documentsQuery.isError && !documentsQuery.data ? (
+        <DataLoadError retry={() => void documentsQuery.refetch()} />
+      ) : documentsQuery.isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
@@ -124,7 +93,7 @@ export default function OmDocumentsPage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-            {visibleItems.map((document) => (
+            {documents.map((document) => (
               <article
                 key={document.id}
                 className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md"
@@ -176,139 +145,13 @@ export default function OmDocumentsPage() {
               </article>
             ))}
           </div>
-          {hasMore ? <div ref={sentinelRef} className="py-8 text-center text-sm font-medium text-slate-400">Loading more documents…</div> : null}
+          <div ref={sentinelRef} className="min-h-6">
+            <LoadMoreStatus loading={documentsQuery.isFetchingNextPage} error={documentsQuery.isFetchNextPageError} onRetry={() => void documentsQuery.fetchNextPage()} />
+          </div>
         </>
       )}
-      {open && (
-        <Modal
-          title="Upload document"
-          onClose={() => !uploadMutation.isPending && setOpen(false)}
-        >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setMessage("");
-              uploadMutation.mutate();
-            }}
-            className="grid gap-4"
-          >
-            <label className="text-sm font-medium text-slate-700">
-              Document title
-              <input
-                required
-                value={form.title}
-                disabled={uploadMutation.isPending}
-                onChange={(event) =>
-                  setForm({ ...form, title: event.target.value })
-                }
-                placeholder="e.g. Employment contract"
-                className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Document type
-              <ShadcnSelect
-                value={form.documentType}
-                disabled={uploadMutation.isPending}
-                onValueChange={(documentType) =>
-                  setForm({ ...form, documentType })
-                }
-                className="mt-1.5"
-                options={documentTypes.map((value) => ({
-                  label: value,
-                  value,
-                }))}
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Description{" "}
-              <span className="font-normal text-slate-400">(optional)</span>
-              <textarea
-                value={form.description}
-                disabled={uploadMutation.isPending}
-                onChange={(event) =>
-                  setForm({ ...form, description: event.target.value })
-                }
-                className="mt-1.5 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm"
-                placeholder="Add a short note"
-              />
-            </label>
-            <div>
-              <p className="text-sm font-medium text-slate-700">File</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,image/jpeg,image/png"
-                className="hidden"
-                disabled={uploadMutation.isPending}
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                disabled={uploadMutation.isPending}
-                onClick={() => fileInputRef.current?.click()}
-                className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#78aaa2] bg-[#eff7f5] px-4 py-5 text-sm font-semibold text-[#17665c] disabled:opacity-60"
-              >
-                <Upload className="size-4" />
-                {file ? file.name : "Choose PDF, JPG, or PNG file"}
-              </button>
-              <p className="mt-1 text-xs text-slate-400">
-                Maximum file size: 10 MB
-              </p>
-            </div>
-            {message && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                {message}
-              </p>
-            )}
-            <button
-              disabled={uploadMutation.isPending}
-              className="rounded-xl bg-[#17665c] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {uploadMutation.isPending && (
-                <LoaderCircle className="mr-2 inline size-4 animate-spin" />
-              )}
-              {uploadMutation.isPending
-                ? "File uploading, please wait…"
-                : "Upload document"}
-            </button>
-          </form>
-        </Modal>
-      )}
-      {previewDocument && (
-        <Modal
-          title={previewDocument.title}
-          onClose={() => setPreviewDocument(null)}
-        >
-          <div className="min-h-[55dvh] overflow-hidden rounded-xl bg-slate-100">
-            {previewDocument.mimeType === "application/pdf" ? (
-              <iframe
-                title={previewDocument.title}
-                src={previewDocument.fileUrl}
-                className="h-[55dvh] w-full border-0"
-              />
-            ) : (
-              <Image
-                src={previewDocument.fileUrl}
-                alt={previewDocument.title}
-                width={1000}
-                height={700}
-                unoptimized
-                className="max-h-[55dvh] w-full object-contain"
-              />
-            )}
-          </div>
-          <a
-            href={previewDocument.fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#17665c] hover:underline"
-          >
-            <ExternalLink className="size-4" />
-            Open original file
-          </a>
-        </Modal>
-      )}
+      {open && <UploadDocumentDialog onClose={() => setOpen(false)} />}
+      {previewDocument && <DocumentPreviewDialog document={previewDocument} onClose={() => setPreviewDocument(null)} />}
       {documentToDelete && (
         <ConfirmDialog
           title="Delete document?"

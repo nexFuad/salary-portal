@@ -2,29 +2,24 @@
 
 import axios from "axios";
 import Link from "next/link";
-import { Suspense, useEffect, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/Hooks/useAuth";
 import { useToast } from "@/Components/Shared/Toast";
 import { dashboardPathByRole } from "@/Types/auth";
 
-function LoginForm() {
+export default function LoginPage() {
   const { login, user, isLoading } = useAuth();
   const { showToast } = useToast();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("");
   const [company, setCompany] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const logoutMessage = searchParams.get("loggedOut") === "1";
-
   useEffect(() => {
-    if (!isLoading && user) {
-      router.replace(dashboardPathByRole[user.role]);
+    if (!isLoading && !isSubmitting && user) {
+      window.location.replace(dashboardPathByRole[user.role]);
     }
-  }, [isLoading, router, user]);
+  }, [isLoading, isSubmitting, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,19 +27,20 @@ function LoginForm() {
     try {
       const user = await login({ employeeId, company, password, rememberMe });
       showToast("Login successful. Redirecting to your dashboard…", "success");
-      router.replace(dashboardPathByRole[user.role]);
+      window.location.replace(dashboardPathByRole[user.role]);
     } catch (requestError) {
+      setIsSubmitting(false);
       const message = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message
         : null;
       showToast(
         typeof message === "string"
           ? message
-          : "Unable to sign in. Please try again.",
+          : requestError instanceof Error
+            ? requestError.message
+            : "Unable to sign in. Please try again.",
         "error",
       );
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -65,12 +61,6 @@ function LoginForm() {
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Use your employee account details to continue.
             </p>
-            {logoutMessage && (
-              <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                You have been logged out successfully.
-              </p>
-            )}
-
             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
               <label className="block text-sm font-semibold text-slate-700">
                 Employee ID
@@ -127,13 +117,5 @@ function LoginForm() {
         </div>
       </section>
     </main>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
   );
 }

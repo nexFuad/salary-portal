@@ -26,7 +26,7 @@ export async function authenticateUser(employeeId, company, password) {
     const user = await prisma.user.findUnique({
         where: { employeeId_company: { employeeId, company } },
     });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || user.accountStatus === "Suspended" || !(await bcrypt.compare(password, user.passwordHash))) {
         return null;
     }
     const updatedUser = await prisma.user.update({
@@ -63,17 +63,19 @@ export async function rotateRefreshSession(token) {
         }
         return null;
     }
-    const refreshToken = createRefreshToken();
+    if (refreshSession.user.accountStatus === "Suspended") {
+        await prisma.refreshSession.delete({ where: { id: refreshSession.id } });
+        return null;
+    }
     await prisma.refreshSession.update({
         where: { id: refreshSession.id },
         data: {
-            tokenHash: hashRefreshToken(refreshToken),
             expiresAt: new Date(Date.now() + refreshTokenLifetimeInMilliseconds),
         },
     });
     return {
         user: refreshSession.user,
-        refreshToken,
+        refreshToken: token,
         persistent: refreshSession.persistent,
     };
 }

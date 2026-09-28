@@ -1,6 +1,7 @@
 import { getCookie } from "hono/cookie";
 import { verify } from "hono/jwt";
 import { accessCookieName } from "../lib/auth.js";
+import { prisma } from "../lib/prisma.js";
 function getToken(authorization, cookieToken) {
     if (authorization?.startsWith("Bearer ")) {
         return authorization.slice(7);
@@ -13,14 +14,27 @@ export const requireAuth = async (c, next) => {
     if (!secret || !token) {
         return c.json({ message: "Authentication is required" }, 401);
     }
+    let payload;
     try {
-        const payload = (await verify(token, secret, "HS256"));
-        c.set("authUser", payload);
-        await next();
+        payload = (await verify(token, secret, "HS256"));
     }
     catch {
         return c.json({ message: "Your session is invalid or expired" }, 401);
     }
+    const user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { employeeId: true, company: true, role: true, accountStatus: true },
+    });
+    if (!user || user.accountStatus === "Suspended") {
+        return c.json({ message: "Your account is unavailable" }, 401);
+    }
+    c.set("authUser", {
+        ...payload,
+        employeeId: user.employeeId,
+        company: user.company,
+        role: user.role,
+    });
+    await next();
 };
 export function requireRole(...roles) {
     return async (c, next) => {

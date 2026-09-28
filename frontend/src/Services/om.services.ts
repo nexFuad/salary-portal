@@ -1,17 +1,20 @@
-import axios from "axios";
+import { createAuthenticatedApi } from "@/Services/authenticated-api";
 import { apiBaseUrl } from "@/Services/api-base-url";
 import type { AuthUser } from "@/Types/auth";
 import type { Loan, SalaryAdvance } from "@/Types/om";
+import type { PageFilters, PageResult } from "@/Types/pagination";
 const api = (path: string) =>
-  axios.create({
+  createAuthenticatedApi({
     baseURL: `${apiBaseUrl}/api/${path}`,
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
 export const salaryAdvanceService = {
-  list: async (filters?: { search?: string }) =>
-    (await api("salary-advances").get<{ requests: SalaryAdvance[] }>("/list", { params: filters }))
-      .data.requests,
+  list: async (filters: PageFilters): Promise<PageResult<SalaryAdvance>> => {
+    const { data } = await api("salary-advances").get<{ requests: SalaryAdvance[]; total: number; page: number; pageSize: number }>("/list", { params: filters });
+    return { items: data.requests, total: data.total, page: data.page, pageSize: data.pageSize };
+  },
+  listAll: async () => (await api("salary-advances").get<{ requests: SalaryAdvance[] }>("/list")).data.requests,
   create: async (data: {
     requestedAmount: string;
     reason: string;
@@ -44,8 +47,11 @@ export const salaryAdvanceService = {
   remove: async (id: string) => api("salary-advances").delete(`/${id}`),
 };
 export const loanService = {
-  list: async (filters?: { search?: string }) =>
-    (await api("loans").get<{ requests: Loan[] }>("/list", { params: filters })).data.requests,
+  list: async (filters: PageFilters): Promise<PageResult<Loan>> => {
+    const { data } = await api("loans").get<{ requests: Loan[]; total: number; page: number; pageSize: number }>("/list", { params: filters });
+    return { items: data.requests, total: data.total, page: data.page, pageSize: data.pageSize };
+  },
+  listAll: async () => (await api("loans").get<{ requests: Loan[] }>("/list")).data.requests,
   get: async (id: string) =>
     (await api("loans").get<{ request: Loan }>(`/${id}`)).data.request,
   create: async (data: {

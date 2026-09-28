@@ -1,5 +1,7 @@
 import type { Context } from "hono";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { readPagination } from "../../lib/pagination.js";
 import type { AppEnv } from "../auth/auth.types.js";
 const types = [
   "Resume/CV",
@@ -13,14 +15,17 @@ const types = [
 ];
 const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png"];
 export async function getDocuments(c: Context<AppEnv>) {
+  const paging = readPagination(c);
+  if (paging === false) return c.json({ message: "Invalid page or pageSize" }, 400);
   const search = c.req.query("search")?.trim();
-  const documents = await prisma.userDocument.findMany({
-    where: search
+  const where: Prisma.UserDocumentWhereInput = search
       ? { userId: c.get("authUser").sub, OR: [{ title: { contains: search, mode: "insensitive" } }, { documentType: { contains: search, mode: "insensitive" } }, { fileName: { contains: search, mode: "insensitive" } }, { description: { contains: search, mode: "insensitive" } }] }
-      : { userId: c.get("authUser").sub },
-    orderBy: { createdAt: "desc" },
-  });
-  return c.json({ documents });
+      : { userId: c.get("authUser").sub };
+  const [documents, total] = await Promise.all([
+    prisma.userDocument.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}) }),
+    prisma.userDocument.count({ where }),
+  ]);
+  return c.json({ documents, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? documents.length });
 }
 export async function createDocument(c: Context<AppEnv>) {
   const body = (await c.req.json().catch(() => null)) as Record<

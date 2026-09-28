@@ -18,6 +18,7 @@ import ActionMenu from "@/Components/Shared/ActionMenu";
 import Modal from "@/Components/Shared/Modal";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
 import Pagination from "@/Components/Shared/Pagination";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import { useSearchBar } from "@/Hooks/useSearchBar";
 import { officerDocumentService } from "@/Services/document.services";
 import type { OfficerDocument } from "@/Types/officer-requests";
@@ -80,11 +81,13 @@ export default function DocumentsList() {
   });
   const { query, setQuery, searchQuery } = useSearchBar();
   const documentsQuery = useQuery({
-    queryKey: ["officer-documents", searchQuery],
+    queryKey: ["officer-documents", searchQuery, page],
     queryFn: () =>
-      officerDocumentService.list({ search: searchQuery || undefined }),
+      officerDocumentService.list({ search: searchQuery || undefined, page, pageSize }),
+    staleTime: 0,
   });
-  const documents = documentsQuery.data ?? [];
+  const rows = documentsQuery.data?.items ?? [];
+  const total = documentsQuery.data?.total ?? 0;
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file.");
@@ -104,8 +107,10 @@ export default function DocumentsList() {
   });
   const deleteMutation = useMutation({
     mutationFn: officerDocumentService.remove,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["officer-documents"] }),
+    onSuccess: () => {
+      if (rows.length === 1 && page > 1) setPage((current) => current - 1);
+      return queryClient.invalidateQueries({ queryKey: ["officer-documents"] });
+    },
   });
   const statusMutation = useMutation({
     mutationFn: ({
@@ -119,12 +124,7 @@ export default function DocumentsList() {
       queryClient.invalidateQueries({ queryKey: ["officer-documents"] }),
   });
 
-  const totalPages = Math.max(1, Math.ceil(documents.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const rows = documents.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
+  if (documentsQuery.isError) return <div className="p-4"><DataLoadError retry={() => void documentsQuery.refetch()} /></div>;
 
   return (
     <div>
@@ -256,8 +256,8 @@ export default function DocumentsList() {
       </SimpleTable>
 
       <Pagination
-        currentPage={safePage}
-        totalItems={documents.length}
+        currentPage={page}
+        totalItems={total}
         pageSize={pageSize}
         onPageChange={setPage}
         className="pb-8"

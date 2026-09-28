@@ -52,6 +52,9 @@ function validate(body, isCreate) {
         typeof input.employeeId === "string" &&
         input.employeeId.trim().length >= 1 &&
         allowedRoles.includes(input.role) &&
+        (input.accountStatus === undefined ||
+            input.accountStatus === "Active" ||
+            input.accountStatus === "Suspended") &&
         (!isCreate ||
             (typeof input.password === "string" && input.password.length >= 6)) &&
         hasValidOptionalFields(input));
@@ -66,13 +69,20 @@ function errorMessage(error) {
     return "Could not save the employee. Please try again.";
 }
 export async function list(c) {
+    const page = Number(c.req.query("page") ?? 1);
+    const pageSize = Number(c.req.query("pageSize") ?? 10);
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100 || (page - 1) * pageSize > 2_147_483_647) {
+        return c.json({ message: "Page must be positive and pageSize must be between 1 and 100." }, 400);
+    }
     const status = c.req.query("status");
-    const employees = await listEmployees(c.get("authUser").company, {
+    const result = await listEmployees(c.get("authUser").company, {
         search: c.req.query("search") || undefined,
         department: c.req.query("department") || undefined,
         status: status === "Active" || status === "Suspended" ? status : undefined,
+        page,
+        pageSize,
     });
-    return c.json({ employees });
+    return c.json(result);
 }
 export async function getById(c) {
     const employee = await findEmployee(c.req.param("id"), c.get("authUser").company);

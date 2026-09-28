@@ -1,3 +1,19 @@
+export type PayrollPage = {
+  records: PayrollRecord[];
+  total: number;
+  monthTotal: number;
+  page: number;
+  pageSize: number;
+  departments: string[];
+  statuses: string[];
+};
+
+export type PayrollGenerationResult = {
+  payRunMonth: string;
+  generatedCount: number;
+  message: string;
+};
+
 export type PayrollRecord = {
   id: string;
   payRunMonth: string;

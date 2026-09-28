@@ -14,16 +14,18 @@ const leaveRequestSelect = {
 function toResponse(request) {
     return request;
 }
-export async function listLeaveRequests(userId, search) {
+export async function listLeaveRequests(userId, search, paging) {
     const term = search?.trim();
-    const requests = await prisma.leaveRequest.findMany({
-        where: term
-            ? { userId, OR: [{ leaveType: { contains: term, mode: "insensitive" } }, { reason: { contains: term, mode: "insensitive" } }, { note: { contains: term, mode: "insensitive" } }] }
-            : { userId },
-        select: leaveRequestSelect,
-        orderBy: { createdAt: "desc" },
-    });
-    return requests.map(toResponse);
+    const where = term
+        ? { userId, OR: [{ leaveType: { contains: term, mode: "insensitive" } }, { reason: { contains: term, mode: "insensitive" } }, { note: { contains: term, mode: "insensitive" } }] }
+        : { userId };
+    const [requests, total] = await Promise.all([prisma.leaveRequest.findMany({
+            where,
+            select: leaveRequestSelect,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}),
+        }), prisma.leaveRequest.count({ where })]);
+    return { requests: requests.map(toResponse), total };
 }
 export async function findLeaveRequest(id, userId) {
     const request = await prisma.leaveRequest.findFirst({

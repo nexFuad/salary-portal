@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import Modal from "@/Components/Shared/Modal";
 import Pagination from "@/Components/Shared/Pagination";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import type { OfficerAttendanceRecord } from "@/Types/officer-requests";
 import {
@@ -97,23 +98,27 @@ function hours(record: OfficerAttendanceRecord) {
 }
 export default function AttendanceRecords() {
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
+  const size = 10;
   const q = useQuery({
-    queryKey: ["officer-attendance"],
-    queryFn: officerRequestsService.attendance,
+    queryKey: ["officer-attendance", page],
+    queryFn: () => officerRequestsService.attendance(page, size),
+    staleTime: 0,
   });
   const del = useMutation({
     mutationFn: officerRequestsService.deleteAttendance,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["officer-attendance"] }),
+    onSuccess: () => {
+      if (rows.length === 1 && page > 1) setPage((current) => current - 1);
+      return qc.invalidateQueries({ queryKey: ["officer-attendance"] });
+    },
   });
-  const [page, setPage] = useState(1);
   const [photo, setPhoto] = useState<{
     url: string;
     title: string;
   } | null>(null);
-  const all = q.data ?? [];
-  const size = 10;
-  const safe = Math.min(page, Math.max(1, Math.ceil(all.length / size)));
-  const rows = all.slice((safe - 1) * size, safe * size);
+  const rows = q.data?.items ?? [];
+  const total = q.data?.total ?? 0;
+  if (q.isError) return <div className="p-4"><DataLoadError retry={() => void q.refetch()} /></div>;
   return (
     <div>
       <SimpleTable
@@ -242,8 +247,8 @@ export default function AttendanceRecords() {
         })}
       </SimpleTable>
       <Pagination
-        currentPage={safe}
-        totalItems={all.length}
+        currentPage={page}
+        totalItems={total}
         pageSize={size}
         onPageChange={setPage}
         className="pb-8"

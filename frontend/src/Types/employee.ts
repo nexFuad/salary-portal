@@ -1,4 +1,25 @@
 import type { UserRole } from "./auth";
+import type { ReactNode } from "react";
+
+export type EmployeeFormSectionProps = {
+  title: string;
+  children: ReactNode;
+};
+
+export type EmployeeFormFieldProps = {
+  label: string;
+  children: ReactNode;
+  required?: boolean;
+  className?: string;
+};
+
+export type EmployeePage = {
+  employees: EmployeeRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  departments: string[];
+};
 
 export type EmployeeRecord = {
   id: string;
@@ -71,3 +92,78 @@ export type EmployeeInput = {
   manager?: string;
   workLocation?: string;
 };
+
+export const emptyForm: EmployeeInput = {
+  name: "",
+  email: "",
+  password: "",
+  phone: "",
+  profilePic: "",
+  dateOfBirth: "",
+  gender: "",
+  role: "OM",
+  accountStatus: "Active",
+  employeeId: "",
+  department: "",
+  designation: "",
+  employmentType: "Full Time",
+  workDaysPerWeek: "5",
+  workStartTime: "09:00",
+  workEndTime: "15:00",
+  joinDate: "",
+  employmentStatus: "Active",
+  basicSalary: "",
+  salaryType: "Monthly",
+  allowances: "",
+  attendanceBonusThreshold: "",
+  attendanceBonusRate: "5",
+  effectiveSalaryDate: "",
+  address: "",
+  city: "",
+  country: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  manager: "",
+  workLocation: "Office",
+};
+
+export function dateValue(value: string | null) {
+  return value?.slice(0, 10) ?? "";
+}
+
+export function toForm(employee: EmployeeRecord): EmployeeInput {
+  return {
+    ...emptyForm,
+    name: employee.name ?? "",
+    email: employee.email ?? "",
+    phone: employee.phone ?? "",
+    profilePic: employee.profilePic ?? "",
+    gender: employee.gender ?? "",
+    role: employee.role,
+    accountStatus: employee.accountStatus ?? "Active",
+    employeeId: employee.employeeId,
+    department: employee.department ?? "",
+    designation: employee.designation ?? "",
+    employmentType: employee.employmentType ?? "Full Time",
+    workDaysPerWeek: employee.workDaysPerWeek?.toString() ?? "5",
+    workStartTime: employee.workStartTime ?? "09:00",
+    workEndTime: employee.workEndTime ?? "15:00",
+    employmentStatus: employee.employmentStatus ?? "Active",
+    salaryType: employee.salaryType ?? "Monthly",
+    address: employee.address ?? "",
+    city: employee.city ?? "",
+    country: employee.country ?? "",
+    emergencyContactName: employee.emergencyContactName ?? "",
+    emergencyContactPhone: employee.emergencyContactPhone ?? "",
+    manager: employee.manager ?? "",
+    workLocation: employee.workLocation ?? "Office",
+    password: "",
+    dateOfBirth: dateValue(employee.dateOfBirth),
+    joinDate: dateValue(employee.joinDate),
+    effectiveSalaryDate: dateValue(employee.effectiveSalaryDate),
+    basicSalary: employee.basicSalary ?? "",
+    allowances: employee.allowances ?? "",
+    attendanceBonusThreshold: employee.attendanceBonusThreshold ?? "",
+    attendanceBonusRate: employee.attendanceBonusRate ?? "5",
+  };
+}

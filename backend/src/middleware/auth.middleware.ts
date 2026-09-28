@@ -2,6 +2,7 @@ import { getCookie } from "hono/cookie";
 import { verify } from "hono/jwt";
 import type { MiddlewareHandler } from "hono";
 import { accessCookieName } from "../lib/auth.js";
+import { prisma } from "../lib/prisma.js";
 import type { AppEnv, JwtPayload } from "../modules/auth/auth.types.js";
 
 function getToken(
@@ -26,13 +27,28 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     return c.json({ message: "Authentication is required" }, 401);
   }
 
+  let payload: JwtPayload;
   try {
-    const payload = (await verify(token, secret, "HS256")) as JwtPayload;
-    c.set("authUser", payload);
-    await next();
+    payload = (await verify(token, secret, "HS256")) as JwtPayload;
   } catch {
     return c.json({ message: "Your session is invalid or expired" }, 401);
   }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub },
+    select: { employeeId: true, company: true, role: true, accountStatus: true },
+  });
+  if (!user || user.accountStatus === "Suspended") {
+    return c.json({ message: "Your account is unavailable" }, 401);
+  }
+
+  c.set("authUser", {
+    ...payload,
+    employeeId: user.employeeId,
+    company: user.company,
+    role: user.role,
+  });
+  await next();
 };
 
 export function requireRole(

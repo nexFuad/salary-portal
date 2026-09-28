@@ -8,7 +8,7 @@ function authCookieOptions() {
     const isProduction = process.env.NODE_ENV === "production";
     return {
         httpOnly: true,
-        sameSite: isProduction ? "None" : "Lax",
+        sameSite: "Lax",
         secure: isProduction,
         path: "/",
     };

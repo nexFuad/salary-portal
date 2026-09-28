@@ -101,15 +101,16 @@ export type EmployeeListFilters = {
   search?: string;
   department?: string;
   status?: "Active" | "Suspended";
+  page: number;
+  pageSize: number;
 };
 
 export async function listEmployees(
   company: string,
-  filters: EmployeeListFilters = {},
+  filters: EmployeeListFilters,
 ) {
   const search = filters.search?.trim();
-  return prisma.user.findMany({
-    where: {
+  const where: Prisma.UserWhereInput = {
       company,
       ...(filters.department ? { department: filters.department } : {}),
       ...(filters.status ? { accountStatus: filters.status } : {}),
@@ -120,10 +121,32 @@ export async function listEmployees(
             })),
           }
         : {}),
-    },
-    select: employeeSelect,
-    orderBy: [{ name: "asc" }, { createdAt: "desc" }],
-  });
+  };
+
+  const [employees, total, departmentRecords] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      select: employeeSelect,
+      orderBy: [{ name: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+      skip: (filters.page - 1) * filters.pageSize,
+      take: filters.pageSize,
+    }),
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where: { company, department: { not: null } },
+      select: { department: true },
+      distinct: ["department"],
+      orderBy: { department: "asc" },
+    }),
+  ]);
+
+  return {
+    employees,
+    total,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    departments: departmentRecords.map((record) => record.department).filter((value): value is string => Boolean(value)),
+  };
 }
 
 export async function findEmployee(id: string, company: string) {

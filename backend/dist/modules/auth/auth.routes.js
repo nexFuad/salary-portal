@@ -6,5 +6,5 @@ authRoutes.post("/login", login);
 authRoutes.post("/refresh", refresh);
 authRoutes.get("/me", requireAuth, me);
 authRoutes.patch("/profile", requireAuth, updateProfile);
-authRoutes.post("/logout", requireAuth, logout);
+authRoutes.post("/logout", logout);
 export default authRoutes;

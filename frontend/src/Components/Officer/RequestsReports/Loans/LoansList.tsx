@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import Pagination from "@/Components/Shared/Pagination";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import {
   RequestTableSkeleton,
@@ -30,8 +31,9 @@ export default function LoansList() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const loansQuery = useQuery({
-    queryKey: ["officer-loans"],
-    queryFn: officerRequestsService.loans,
+    queryKey: ["officer-loans", page],
+    queryFn: () => officerRequestsService.loans(page, pageSize),
+    staleTime: 0,
   });
   const statusMutation = useMutation({
     mutationFn: ({
@@ -45,10 +47,9 @@ export default function LoansList() {
       queryClient.invalidateQueries({ queryKey: ["officer-loans"] }),
   });
 
-  const loans = loansQuery.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(loans.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const rows = loans.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rows = loansQuery.data?.items ?? [];
+  const total = loansQuery.data?.total ?? 0;
+  if (loansQuery.isError) return <div className="p-4"><DataLoadError retry={() => void loansQuery.refetch()} /></div>;
 
   return (
     <div>
@@ -157,8 +158,8 @@ export default function LoansList() {
         })}
       </SimpleTable>
       <Pagination
-        currentPage={safePage}
-        totalItems={loans.length}
+        currentPage={page}
+        totalItems={total}
         pageSize={pageSize}
         onPageChange={setPage}
         className="pb-8"

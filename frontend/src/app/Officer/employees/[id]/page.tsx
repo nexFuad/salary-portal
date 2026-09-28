@@ -1,13 +1,8 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { use } from "react";
-import NewEmployeePage from "../new/page";
-
-export default function EmployeeDetailsPage({
+export default async function EmployeeDetailsPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  return <NewEmployeePage employeeId={id} />;
+}: PageProps<"/Officer/employees/[id]">) {
+  const { id } = await params;
+  redirect(`/Officer/employees/new?employeeId=${encodeURIComponent(id)}`);
 }

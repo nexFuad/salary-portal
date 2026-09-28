@@ -1,8 +1,9 @@
-import axios from "axios";
+import { createAuthenticatedApi } from "@/Services/authenticated-api";
 import { apiBaseUrl } from "@/Services/api-base-url";
 import { uploadDocument } from "@/Services/upload.services";
-import type { OfficerDocument, OfficerDocumentInput } from "@/Types/officer-requests";
+import type { OfficerDocument, OfficerDocumentInput, OfficerPage } from "@/Types/officer-requests";
 import type { UserDocument } from "@/Types/om";
+import type { PageFilters, PageResult } from "@/Types/pagination";
 
 type DocumentDetails = {
   title: string;
@@ -18,13 +19,13 @@ type UploadedDocumentFile = Pick<
 const allowedDocumentTypes = ["application/pdf", "image/jpeg", "image/png"];
 const maxDocumentSize = 10 * 1024 * 1024;
 
-const employeeDocumentsApi = axios.create({
+const employeeDocumentsApi = createAuthenticatedApi({
   baseURL: `${apiBaseUrl}/api/documents`,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-const officerDocumentsApi = axios.create({
+const officerDocumentsApi = createAuthenticatedApi({
   baseURL: `${apiBaseUrl}/api/officer-requests/documents`,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
@@ -47,9 +48,12 @@ async function uploadDocumentDetails(file: File): Promise<UploadedDocumentFile> 
 }
 
 export const documentService = {
-  list: async (filters?: { search?: string }) =>
-    (await employeeDocumentsApi.get<{ documents: UserDocument[] }>("/list", { params: filters }))
-      .data.documents,
+  list: async (filters: PageFilters): Promise<PageResult<UserDocument>> => {
+    const { data } = await employeeDocumentsApi.get<{ documents: UserDocument[]; total: number; page: number; pageSize: number }>("/list", { params: filters });
+    return { items: data.documents, total: data.total, page: data.page, pageSize: data.pageSize };
+  },
+  listAll: async () =>
+    (await employeeDocumentsApi.get<{ documents: UserDocument[] }>("/list")).data.documents,
   upload: async (details: DocumentDetails, file: File) => {
     const uploadedFile = await uploadDocumentDetails(file);
     return (
@@ -63,12 +67,12 @@ export const documentService = {
 };
 
 export const officerDocumentService = {
-  list: async (filters?: { search?: string }): Promise<OfficerDocument[]> =>
-    (
-      await officerDocumentsApi.get<{ documents: OfficerDocument[] }>("", {
+  list: async (filters: { search?: string; page: number; pageSize: number }): Promise<OfficerPage<OfficerDocument>> => {
+    const { data } = await officerDocumentsApi.get<{ documents: OfficerDocument[]; total: number; page: number; pageSize: number }>("", {
         params: filters,
-      })
-    ).data.documents,
+      });
+    return { items: data.documents, total: data.total, page: data.page, pageSize: data.pageSize };
+  },
   upload: async (details: DocumentDetails, file: File) => {
     const uploadedFile = await uploadDocumentDetails(file);
     return (

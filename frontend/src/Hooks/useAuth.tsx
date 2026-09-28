@@ -11,6 +11,7 @@ import {
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { authService } from "@/Services/auth.services";
+import { useToast } from "@/Components/Shared/Toast";
 import type { AuthContextValue, AuthUser, LoginPayload } from "@/Types/auth";
 
 const authUserQueryKey = ["auth", "user"] as const;
@@ -30,8 +31,9 @@ async function getAuthenticatedUser() {
 
 function AuthContextProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const pathname = usePathname();
-  const shouldCheckSession = pathname !== "/" && pathname !== "/Login";
+  const shouldCheckSession = pathname !== "/";
   const currentUserQuery = useQuery({
     queryKey: authUserQueryKey,
     queryFn: getAuthenticatedUser,
@@ -50,8 +52,12 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: authService.logout,
-    onSettled: () => {
+    onSuccess: () => {
+      showToast("You have been logged out successfully.", "success");
       queryClient.setQueryData<AuthUser | null>(authUserQueryKey, null);
+    },
+    onError: () => {
+      showToast("Could not log out. Please try again.", "error");
     },
   });
 
@@ -62,6 +68,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user: currentUserQuery.data ?? null,
     isLoading: shouldCheckSession && currentUserQuery.isPending,
+    isAuthError: currentUserQuery.isError,
     login: loginMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     refreshUser,

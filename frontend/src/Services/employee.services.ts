@@ -1,7 +1,7 @@
-import axios from "axios";
+import { createAuthenticatedApi } from "@/Services/authenticated-api";
 import { apiBaseUrl } from "@/Services/api-base-url";
-import type { EmployeeInput, EmployeeRecord } from "@/Types/employee";
-const employeeApi = axios.create({
+import type { EmployeeInput, EmployeePage, EmployeeRecord } from "@/Types/employee";
+const employeeApi = createAuthenticatedApi({
   baseURL: `${apiBaseUrl}/api/employees`,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
@@ -12,12 +12,14 @@ export const employeeService = {
     search?: string;
     department?: string;
     status?: string;
+    page: number;
+    pageSize: number;
   }) =>
     (
-      await employeeApi.get<{ employees: EmployeeRecord[] }>("/list", {
+      await employeeApi.get<EmployeePage>("/list", {
         params: filters,
       })
-    ).data.employees,
+    ).data,
   getById: async (id: string) =>
     (await employeeApi.get<{ employee: EmployeeRecord }>(`/${id}`)).data
       .employee,

@@ -1,0 +1,15 @@
+# Deployment checks
+
+The Vercel frontend proxies `/api/*` to the backend. Set `BACKEND_API_URL` on the **Vercel frontend project** to the backend's public HTTPS origin, without `/api` or a trailing slash. Redeploy the frontend after changing it. Browser requests remain on the Vercel origin so the auth cookies work on dashboard navigation.
+
+Build the frontend from `frontend/` with `pnpm install --frozen-lockfile && pnpm build`. Set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` for attendance photos, profile images, and document uploads. Configure the Cloudinary unsigned preset to allow only the intended file types and sizes. `NEXT_PUBLIC_API_URL` is used only for local development; production browser requests use `/api`.
+
+On the **backend service**, set `DATABASE_URL` to a reachable PostgreSQL connection string and `AUTH_JWT_SECRET` to a stable secret. Keep the same secret across backend restarts and deployments. Set `FRONTEND_URL` to the Vercel origin. The backend start command must run `prisma migrate deploy` before `node dist/index.js`; `backend/package.json` already does this. Verify that the database has the `User` and `RefreshSession` tables and that the intended employee account was seeded or created there.
+
+Build the backend from `backend/` with `pnpm install --frozen-lockfile && pnpm build`, then start it with `pnpm start`. The build generates Prisma Client and compiles the current TypeScript source; the start command applies pending migrations. Make sure the deployment service runs that build command on every deploy, since `start` executes the compiled `dist` files. Do not run the demo seed against a production database unless those demo accounts are intentionally required.
+
+Check `/health/database` on the backend after deploying. It returns `503` when the database connection or `User` table is unavailable, and the backend logs contain the exact error. To isolate a production login error, POST a valid-shape request with an intentionally unknown employee ID. It should return `401` with `Invalid Employee ID, company, or password`. A `500` for this request means the backend cannot complete the database lookup or its environment/configuration is broken; inspect the backend deployment logs for the exact Prisma or connection error. A `400` means the request shape is invalid. Check the Vercel rewrite and backend logs if the response is HTML instead of JSON.
+
+Remember me is checked by default. It stores an HTTP-only refresh cookie for 30 days and extends that window whenever the session refreshes. A browser session without remember me lasts until the browser session ends. Explicit logout revokes the refresh session and clears both cookies. A session inactive for more than 30 days needs a new login.
+
+After deployment, check `/health/database`, sign in with one real OM and one Officer account, refresh each dashboard, then verify an authenticated list request and logout. This local code review and build cannot confirm production credentials, Vercel variables, Cloudinary preset, or database contents without a deployment smoke test.

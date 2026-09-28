@@ -14,7 +14,7 @@ function authCookieOptions() {
 
   return {
     httpOnly: true,
-    sameSite: isProduction ? ("None" as const) : ("Lax" as const),
+    sameSite: "Lax" as const,
     secure: isProduction,
     path: "/",
   };

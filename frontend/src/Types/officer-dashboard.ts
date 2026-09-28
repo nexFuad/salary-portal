@@ -1,3 +1,15 @@
+import type { ComponentType } from "react";
+
+export type IconProps = { size?: number; strokeWidth?: number; className?: string };
+
+export type StatCard = {
+  label: string;
+  value: string;
+  note?: string;
+  noteTone?: "success" | "warning";
+  icon: ComponentType<IconProps>;
+};
+
 export type OfficerDashboard = {
   overview: {
     totalEmployees: number;

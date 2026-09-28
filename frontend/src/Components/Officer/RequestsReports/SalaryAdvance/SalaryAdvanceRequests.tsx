@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import Pagination from "@/Components/Shared/Pagination";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import { officerRequestsService } from "@/Services/officer-requests.services";
 import {
   RequestTableSkeleton,
@@ -30,8 +31,9 @@ export default function SalaryAdvanceRequests() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const requestsQuery = useQuery({
-    queryKey: ["officer-salary-advances"],
-    queryFn: officerRequestsService.salaryAdvances,
+    queryKey: ["officer-salary-advances", page],
+    queryFn: () => officerRequestsService.salaryAdvances(page, pageSize),
+    staleTime: 0,
   });
   const statusMutation = useMutation({
     mutationFn: ({
@@ -47,10 +49,9 @@ export default function SalaryAdvanceRequests() {
       }),
   });
 
-  const requests = requestsQuery.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(requests.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const rows = requests.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rows = requestsQuery.data?.items ?? [];
+  const total = requestsQuery.data?.total ?? 0;
+  if (requestsQuery.isError) return <div className="p-4"><DataLoadError retry={() => void requestsQuery.refetch()} /></div>;
 
   return (
     <div>
@@ -161,8 +162,8 @@ export default function SalaryAdvanceRequests() {
         })}
       </SimpleTable>
       <Pagination
-        currentPage={safePage}
-        totalItems={requests.length}
+        currentPage={page}
+        totalItems={total}
         pageSize={pageSize}
         onPageChange={setPage}
         className="pb-8"

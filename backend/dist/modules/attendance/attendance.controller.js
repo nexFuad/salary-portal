@@ -1,3 +1,4 @@
+import { readPagination } from "../../lib/pagination.js";
 import { checkIn, checkOut, deleteAttendance, getCurrentAttendance, listAttendance, } from "./attendance.service.js";
 function readAttendanceInput(value) {
     if (!value ||
@@ -34,8 +35,11 @@ export async function current(c) {
     return c.json({ attendance });
 }
 export async function list(c) {
-    const attendance = await listAttendance(c.get("authUser").sub, c.req.query("search"));
-    return c.json({ attendance });
+    const paging = readPagination(c);
+    if (paging === false)
+        return c.json({ message: "Invalid page or pageSize" }, 400);
+    const { attendance, total } = await listAttendance(c.get("authUser").sub, c.req.query("search"), paging ?? undefined);
+    return c.json({ attendance, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? attendance.length });
 }
 export async function checkInForToday(c) {
     const input = readAttendanceInput(await c.req.json().catch(() => null));

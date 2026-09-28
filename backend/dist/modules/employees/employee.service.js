@@ -88,24 +88,43 @@ function profileData(input) {
         workLocation: optionalText(input.workLocation),
     };
 }
-export async function listEmployees(company, filters = {}) {
+export async function listEmployees(company, filters) {
     const search = filters.search?.trim();
-    return prisma.user.findMany({
-        where: {
-            company,
-            ...(filters.department ? { department: filters.department } : {}),
-            ...(filters.status ? { accountStatus: filters.status } : {}),
-            ...(search
-                ? {
-                    OR: ["name", "email", "employeeId", "phone"].map((field) => ({
-                        [field]: { contains: search, mode: "insensitive" },
-                    })),
-                }
-                : {}),
-        },
-        select: employeeSelect,
-        orderBy: [{ name: "asc" }, { createdAt: "desc" }],
-    });
+    const where = {
+        company,
+        ...(filters.department ? { department: filters.department } : {}),
+        ...(filters.status ? { accountStatus: filters.status } : {}),
+        ...(search
+            ? {
+                OR: ["name", "email", "employeeId", "phone"].map((field) => ({
+                    [field]: { contains: search, mode: "insensitive" },
+                })),
+            }
+            : {}),
+    };
+    const [employees, total, departmentRecords] = await Promise.all([
+        prisma.user.findMany({
+            where,
+            select: employeeSelect,
+            orderBy: [{ name: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+            skip: (filters.page - 1) * filters.pageSize,
+            take: filters.pageSize,
+        }),
+        prisma.user.count({ where }),
+        prisma.user.findMany({
+            where: { company, department: { not: null } },
+            select: { department: true },
+            distinct: ["department"],
+            orderBy: { department: "asc" },
+        }),
+    ]);
+    return {
+        employees,
+        total,
+        page: filters.page,
+        pageSize: filters.pageSize,
+        departments: departmentRecords.map((record) => record.department).filter((value) => Boolean(value)),
+    };
 }
 export async function findEmployee(id, company) {
     return prisma.user.findFirst({

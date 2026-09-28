@@ -1,5 +1,6 @@
 import { RequestStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { readPagination } from "../../lib/pagination.js";
 const valid = (v) => {
     const x = v;
     return (x &&
@@ -23,14 +24,18 @@ function requestData(body) {
     };
 }
 export async function getSalaryAdvances(c) {
+    const paging = readPagination(c);
+    if (paging === false)
+        return c.json({ message: "Invalid page or pageSize" }, 400);
     const search = c.req.query("search")?.trim();
-    const requests = await prisma.salaryAdvanceRequest.findMany({
-        where: search
-            ? { userId: c.get("authUser").sub, OR: [{ reason: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
-            : { userId: c.get("authUser").sub },
-        orderBy: { createdAt: "desc" },
-    });
-    return c.json({ requests });
+    const where = search
+        ? { userId: c.get("authUser").sub, OR: [{ reason: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
+        : { userId: c.get("authUser").sub };
+    const [requests, total] = await Promise.all([
+        prisma.salaryAdvanceRequest.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}) }),
+        prisma.salaryAdvanceRequest.count({ where }),
+    ]);
+    return c.json({ requests, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? requests.length });
 }
 export async function createSalaryAdvance(c) {
     const body = await c.req.json().catch(() => null);

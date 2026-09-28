@@ -1,3 +1,4 @@
+import { readPagination } from "../../lib/pagination.js";
 import { createLeaveRequest, deleteLeaveRequest, findLeaveRequest, listLeaveRequests, updateLeaveRequest, } from "./leave-request.service.js";
 function isLeaveRequestInput(value) {
     if (!value || typeof value !== "object")
@@ -23,8 +24,11 @@ function normalizedInput(input) {
     };
 }
 export async function list(c) {
-    const requests = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"));
-    return c.json({ requests });
+    const paging = readPagination(c);
+    if (paging === false)
+        return c.json({ message: "Invalid page or pageSize" }, 400);
+    const { requests, total } = await listLeaveRequests(c.get("authUser").sub, c.req.query("search"), paging ?? undefined);
+    return c.json({ requests, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? requests.length });
 }
 export async function getById(c) {
     const request = await findLeaveRequest(c.req.param("id"), c.get("authUser").sub);

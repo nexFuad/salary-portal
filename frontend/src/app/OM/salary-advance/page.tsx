@@ -1,30 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import OmPageShell from "@/Components/OM/OmPageShell";
+import SalaryAdvanceDialog from "@/Components/OM/salary-advance-dialog";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
-import Modal from "@/Components/Shared/Modal";
-import { useInfiniteScroll } from "@/Hooks/useInfiniteScroll";
+import LoadMoreStatus from "@/Components/Shared/LoadMoreStatus";
+import DataLoadError from "@/Components/Shared/DataLoadError";
+import { useLoadMoreOnScroll } from "@/Hooks/useLoadMoreOnScroll";
 import { useSearchBar } from "@/Hooks/useSearchBar";
 import { salaryAdvanceService } from "@/Services/om.services";
 import type { SalaryAdvance } from "@/Types/om";
 
-type Form = {
-  requestedAmount: string;
-  repaymentMonths: string;
-  reason: string;
-  note: string;
-  requestDate: string;
-};
-const initialForm = (): Form => ({
-  requestedAmount: "",
-  repaymentMonths: "",
-  reason: "",
-  note: "",
-  requestDate: new Date().toISOString().slice(0, 10),
-});
 const amount = (value: string | null) =>
   value ? `৳${Number(value).toLocaleString()}` : "—";
 const date = (value: string) =>
@@ -46,36 +34,18 @@ const statusClass = (status: SalaryAdvance["status"]) =>
 export default function SalaryAdvancePage() {
   const client = useQueryClient();
   const { query: search, setQuery: setSearch, searchQuery } = useSearchBar();
-  const [form, setForm] = useState<Form>(initialForm());
+  const pageSize = 10;
   const [editing, setEditing] = useState<SalaryAdvance | null>(null);
   const [deleting, setDeleting] = useState<SalaryAdvance | null>(null);
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState("");
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ["salary-advances", searchQuery],
-    queryFn: () => salaryAdvanceService.list({ search: searchQuery || undefined }),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => salaryAdvanceService.list({ search: searchQuery || undefined, page: pageParam, pageSize }),
+    getNextPageParam: (lastPage, pages) => pages.length * pageSize < lastPage.total ? pages.length + 1 : undefined,
   });
-  const records = query.data ?? [];
-  const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(records);
-  const save = useMutation({
-    mutationFn: () =>
-      editing
-        ? salaryAdvanceService.update(editing.id, {
-            ...form,
-            repaymentMonths: Number(form.repaymentMonths),
-          })
-        : salaryAdvanceService.create({
-            ...form,
-            repaymentMonths: Number(form.repaymentMonths),
-          }),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["salary-advances"] });
-      setOpen(false);
-      setEditing(null);
-      setForm(initialForm());
-    },
-    onError: () => setError("Could not save your salary advance request."),
-  });
+  const records = query.data?.pages.flatMap((result) => result.items) ?? [];
+  const sentinelRef = useLoadMoreOnScroll(Boolean(query.hasNextPage) && !query.isFetchingNextPage && !query.isFetchNextPageError, () => { void query.fetchNextPage(); });
   const remove = useMutation({
     mutationFn: salaryAdvanceService.remove,
     onSuccess: async () => {
@@ -92,8 +62,6 @@ export default function SalaryAdvancePage() {
           type="button"
           onClick={() => {
             setEditing(null);
-            setForm(initialForm());
-            setError("");
             setOpen(true);
           }}
           className="inline-flex items-center gap-2 rounded-xl bg-[#17665c] px-3.5 py-2.5 text-sm font-semibold text-white"
@@ -104,7 +72,9 @@ export default function SalaryAdvancePage() {
       }
     >
       <label className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-white px-3"><Search className="size-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search salary advances" className="min-w-0 flex-1 text-sm outline-none" /></label>
-      {query.isPending || query.isError ? (
+      {query.isError && !query.data ? (
+        <DataLoadError retry={() => void query.refetch()} />
+      ) : query.isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           {Array.from({ length: 8 }, (_, index) => (
             <div
@@ -120,7 +90,7 @@ export default function SalaryAdvancePage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-            {visibleItems.map((request) => {
+            {records.map((request) => {
               const isPending = request.status === "PENDING";
               return (
                 <article
@@ -171,14 +141,6 @@ export default function SalaryAdvancePage() {
                         type="button"
                         onClick={() => {
                           setEditing(request);
-                          setForm({
-                            requestedAmount: request.requestedAmount,
-                            repaymentMonths: String(request.repaymentMonths),
-                            reason: request.reason,
-                            note: request.note ?? "",
-                            requestDate: request.requestDate.slice(0, 10),
-                          });
-                          setError("");
                           setOpen(true);
                         }}
                         aria-label="Edit salary advance request"
@@ -203,102 +165,12 @@ export default function SalaryAdvancePage() {
               );
             })}
           </div>
-          {hasMore ? (
-            <div
-              ref={sentinelRef}
-              className="py-8 text-center text-sm font-medium text-slate-400"
-            >
-              Loading more salary advance requests…
-            </div>
-          ) : null}
+          <div ref={sentinelRef} className="min-h-6">
+            <LoadMoreStatus loading={query.isFetchingNextPage} error={query.isFetchNextPageError} onRetry={() => void query.fetchNextPage()} />
+          </div>
         </>
       )}
-      {open && (
-        <Modal
-          title={editing ? "Edit salary advance" : "Request salary advance"}
-          onClose={() => !save.isPending && setOpen(false)}
-        >
-          <form
-            className="grid gap-2.5 sm:grid-cols-2 [&_input]:border-slate-200 [&_input]:bg-white [&_input]:outline-none [&_input]:focus:border-[#2c7469] [&_select]:border-slate-200 [&_select]:bg-white [&_select]:outline-none [&_select]:focus:border-[#2c7469] [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:outline-none [&_textarea]:focus:border-[#2c7469]"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setError("");
-              save.mutate();
-            }}
-          >
-            <label className="text-sm font-medium text-slate-700">
-              Requested amount
-              <input
-                required
-                type="text"
-                inputMode="decimal"
-                placeholder="e.g. 10000"
-                value={form.requestedAmount}
-                onChange={(e) =>
-                  setForm({ ...form, requestedAmount: e.target.value })
-                }
-                className="mt-1 h-10 w-full rounded-xl border px-3 text-sm"
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Repayment months
-              <input
-                required
-                type="text"
-                inputMode="numeric"
-                placeholder="e.g. 3"
-                value={form.repaymentMonths}
-                onChange={(e) =>
-                  setForm({ ...form, repaymentMonths: e.target.value })
-                }
-                className="mt-1 h-10 w-full rounded-xl border px-3 text-sm"
-              />
-            </label>
-            <label className="sm:col-span-2 text-sm font-medium text-slate-700">
-              Reason
-              <textarea
-                required
-                placeholder="Briefly explain why you need the advance"
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                className="mt-1 min-h-16 w-full rounded-xl border p-2.5 text-sm"
-              />
-            </label>
-            <label className="sm:col-span-2 text-sm font-medium text-slate-700">
-              Additional note{" "}
-              <span className="font-normal text-slate-400">(optional)</span>
-              <textarea
-                placeholder="Add any extra information for your manager"
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-                className="mt-1 min-h-16 w-full rounded-xl border p-2.5 text-sm"
-              />
-            </label>
-            {error && (
-              <p className="sm:col-span-2 text-sm text-rose-600">{error}</p>
-            )}
-            <div className="flex gap-3 sm:col-span-2">
-              <button
-                disabled={save.isPending}
-                className="rounded-xl bg-[#17665c] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#105348] disabled:opacity-60"
-              >
-                {save.isPending
-                  ? "Saving…"
-                  : editing
-                    ? "Update request"
-                    : "Submit request"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      {open && <SalaryAdvanceDialog key={editing?.id ?? "new"} editing={editing} onClose={() => { setOpen(false); setEditing(null); }} />}
       {deleting && (
         <ConfirmDialog
           title="Delete salary advance request?"

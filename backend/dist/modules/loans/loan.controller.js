@@ -1,5 +1,6 @@
 import { RequestStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { readPagination } from "../../lib/pagination.js";
 import { refreshLoanRepaymentProgress } from "./loan.service.js";
 const loanTypes = [
     "Personal Loan",
@@ -51,15 +52,19 @@ function requestData(body) {
     };
 }
 export async function getLoans(c) {
+    const paging = readPagination(c);
+    if (paging === false)
+        return c.json({ message: "Invalid page or pageSize" }, 400);
     await refreshLoanRepaymentProgress(c.get("authUser").sub);
     const search = c.req.query("search")?.trim();
-    const requests = await prisma.loanRequest.findMany({
-        where: search
-            ? { userId: c.get("authUser").sub, OR: [{ loanType: { contains: search, mode: "insensitive" } }, { purpose: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
-            : { userId: c.get("authUser").sub },
-        orderBy: { createdAt: "desc" },
-    });
-    return c.json({ requests });
+    const where = search
+        ? { userId: c.get("authUser").sub, OR: [{ loanType: { contains: search, mode: "insensitive" } }, { purpose: { contains: search, mode: "insensitive" } }, { note: { contains: search, mode: "insensitive" } }] }
+        : { userId: c.get("authUser").sub };
+    const [requests, total] = await Promise.all([
+        prisma.loanRequest.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}) }),
+        prisma.loanRequest.count({ where }),
+    ]);
+    return c.json({ requests, total, page: paging?.page ?? 1, pageSize: paging?.pageSize ?? requests.length });
 }
 export async function getLoan(c) {
     await refreshLoanRepaymentProgress(c.get("authUser").sub);

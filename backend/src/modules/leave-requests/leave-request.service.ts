@@ -1,4 +1,4 @@
-import { LeaveRequestStatus, type LeaveRequest } from "@prisma/client";
+import { LeaveRequestStatus, type LeaveRequest, type Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import type {
   CreateLeaveRequestInput,
@@ -24,17 +24,19 @@ function toResponse(
   return request;
 }
 
-export async function listLeaveRequests(userId: string, search?: string) {
+export async function listLeaveRequests(userId: string, search?: string, paging?: { skip: number; pageSize: number }) {
   const term = search?.trim();
-  const requests = await prisma.leaveRequest.findMany({
-    where: term
+  const where: Prisma.LeaveRequestWhereInput = term
       ? { userId, OR: [{ leaveType: { contains: term, mode: "insensitive" } }, { reason: { contains: term, mode: "insensitive" } }, { note: { contains: term, mode: "insensitive" } }] }
-      : { userId },
+      : { userId };
+  const [requests, total] = await Promise.all([prisma.leaveRequest.findMany({
+    where,
     select: leaveRequestSelect,
-    orderBy: { createdAt: "desc" },
-  });
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...(paging ? { skip: paging.skip, take: paging.pageSize } : {}),
+  }), prisma.leaveRequest.count({ where })]);
 
-  return requests.map(toResponse);
+  return { requests: requests.map(toResponse), total };
 }
 
 export async function findLeaveRequest(id: string, userId: string) {

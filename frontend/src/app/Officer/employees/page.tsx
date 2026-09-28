@@ -5,14 +5,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { jsPDF } from "jspdf";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
   CheckCircle2,
   Download,
   Eye,
-  ListFilter,
   Pencil,
   Plus,
   Search,
@@ -20,24 +19,25 @@ import {
 } from "lucide-react";
 import ActionMenu from "@/Components/Shared/ActionMenu";
 import ConfirmDialog from "@/Components/Shared/ConfirmDialog";
-import Modal from "@/Components/Shared/Modal";
 import Pagination from "@/Components/Shared/Pagination";
 import Table, { type TableColumn } from "@/Components/Shared/Table";
 import TableSkeleton from "@/Components/Shared/TableSkeleton";
+import DataLoadError from "@/Components/Shared/DataLoadError";
 import ShadcnSelect from "@/Components/Shared/ShadcnSelect";
+import ViewEmployeeDialog from "@/Components/Officer/viewemployeedialog";
 import { useSearchBar } from "@/Hooks/useSearchBar";
 import { employeeService } from "@/Services/employee.services";
+import OfficerHeader from "@/Components/Officer/OfficerHeader";
 import type { EmployeeRecord } from "@/Types/employee";
 
 const pageSize = 10;
 
 function initials(name: string | null) {
-  return (name ?? "Employee")
-    .split(" ")
-    .filter(Boolean)
+  return (name?.trim() || "Employee")
+    .split(/\s+/)
     .map((part) => part[0])
     .join("")
-    .slice(0, 2)
+    .substring(0, 2)
     .toUpperCase();
 }
 
@@ -73,19 +73,20 @@ export default function EmployeesPage() {
   const [actionError, setActionError] = useState("");
   const queryClient = useQueryClient();
   const employeeQuery = useQuery({
-    queryKey: ["officer-employees", searchQuery, department, status],
+    queryKey: ["officer-employees", searchQuery, department, status, currentPage],
     queryFn: () =>
       employeeService.list({
         search: searchQuery || undefined,
         department:
           department === "All departments" ? undefined : department,
         status: status === "All statuses" ? undefined : status,
+        page: currentPage,
+        pageSize,
       }),
   });
-  const employees = useMemo(
-    () => employeeQuery.data ?? [],
-    [employeeQuery.data],
-  );
+
+  const employees = employeeQuery.data?.employees ?? [];
+  const totalEmployees = employeeQuery.data?.total ?? 0;
   const refreshEmployees = () =>
     queryClient.invalidateQueries({ queryKey: ["officer-employees"] });
   const statusMutation = useMutation({
@@ -109,6 +110,9 @@ export default function EmployeesPage() {
     mutationFn: employeeService.remove,
     onSuccess: () => {
       setDeletingEmployee(null);
+      if (employees.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1);
+      }
       void refreshEmployees();
     },
     onError: (error) =>
@@ -119,26 +123,9 @@ export default function EmployeesPage() {
       ),
   });
 
-  const departments = useMemo(
-    () =>
-      [
-        ...new Set(
-          employees.map((employee) => employee.department).filter(Boolean),
-        ),
-      ] as string[],
-    [employees],
-  );
+  const departments = employeeQuery.data?.departments ?? [];
+
   const statuses = ["Active", "Suspended"];
-  const filteredEmployees = employees;
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredEmployees.length / pageSize),
-  );
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedEmployees = filteredEmployees.slice(
-    (safeCurrentPage - 1) * pageSize,
-    safeCurrentPage * pageSize,
-  );
 
   const columns: TableColumn<EmployeeRecord>[] = [
     {
@@ -284,7 +271,7 @@ export default function EmployeesPage() {
     pdf.text("Status", 500, 68);
     pdf.text("Email", 585, 68);
     let y = 86;
-    filteredEmployees.forEach((employee) => {
+    employees.forEach((employee) => {
       if (y > 550) {
         pdf.addPage();
         y = 42;
@@ -299,7 +286,7 @@ export default function EmployeesPage() {
       ];
       const positions = [40, 175, 285, 415, 500, 585];
       values.forEach((value, valueIndex) =>
-        pdf.text(String(value).slice(0, 22), positions[valueIndex], y),
+        pdf.text(String(value).substring(0, 22), positions[valueIndex], y),
       );
       pdf.setDrawColor(225);
       pdf.line(40, y + 7, 790, y + 7);
@@ -310,21 +297,9 @@ export default function EmployeesPage() {
 
   return (
     <section className="min-w-0">
-      <div className="border-b border-[#e5ebea] bg-white px-4 py-5 sm:px-6 lg:px-9 lg:py-6">
-        <p className="text-xs text-[#849099]">
-          SalaryFlow <span className="mx-2 text-[#a7afb5]">›</span>{" "}
-          <span className="font-semibold text-[#4b5760]">Employees</span>
-        </p>
-        <h1 className="mt-1.5 text-[24px] font-bold tracking-[-0.035em] text-[#202b35]">
-          Employees
-        </h1>
-      </div>
+      <OfficerHeader title="Employees" />
       <div className="border-b border-[#e5ebea] bg-white px-4 py-4 sm:px-6 lg:px-9">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:flex lg:flex-wrap lg:items-center">
-          <ListFilter
-            className="hidden shrink-0 text-[#71808a] sm:block"
-            size={21}
-          />
           <label className="col-span-2 flex h-10 min-w-52.5 items-center gap-2 rounded-lg border border-[#e0e6e5] px-3 text-[#929da6] md:col-span-4 lg:min-w-65 lg:flex-1">
             <Search size={17} />
             <input
@@ -360,7 +335,7 @@ export default function EmployeesPage() {
               onClick={exportPdf}
               className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#dfe6e5] px-3 text-xs font-semibold text-[#52606a]"
             >
-              <Download size={16} /> Export PDF
+              <Download size={16} /> Export page PDF
             </button>
             <Link
               href="/Officer/employees/new"
@@ -377,65 +352,28 @@ export default function EmployeesPage() {
             {actionError}
           </p>
         ) : null}
-        {employeeQuery.isPending || employeeQuery.isError ? (
+        {employeeQuery.isError ? (
+          <div className="p-4"><DataLoadError retry={() => void employeeQuery.refetch()} /></div>
+        ) : employeeQuery.isPending ? (
           <TableSkeleton rows={8} />
         ) : (
           <>
             <Table
               columns={columns}
-              data={paginatedEmployees}
+              data={employees}
               getRowId={(employee) => employee.id}
-              selectable
               emptyMessage="No employees match your filters."
             />
             <Pagination
-              currentPage={safeCurrentPage}
-              totalItems={filteredEmployees.length}
+              currentPage={currentPage}
+              totalItems={totalEmployees}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
             />
           </>
         )}
       </div>
-      {viewingEmployee ? (
-        <Modal
-          title="Employee details"
-          onClose={() => setViewingEmployee(null)}
-        >
-          <div className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
-            {[
-              ["Full name", viewingEmployee.name],
-              ["Employee ID", viewingEmployee.employeeId],
-              ["Email", viewingEmployee.email],
-              ["Phone", viewingEmployee.phone],
-              ["Role", viewingEmployee.role],
-              ["Account status", viewingEmployee.accountStatus],
-              ["Department", viewingEmployee.department],
-              ["Designation", viewingEmployee.designation],
-              ["Employment type", viewingEmployee.employmentType],
-              ["Employment status", viewingEmployee.employmentStatus],
-              ["Join date", formatDate(viewingEmployee.joinDate)],
-              ["Work location", viewingEmployee.workLocation],
-              ["Manager / supervisor", viewingEmployee.manager],
-              ["Basic salary", formatMoney(viewingEmployee.basicSalary)],
-              ["Salary type", viewingEmployee.salaryType],
-              ["Address", viewingEmployee.address],
-              ["City", viewingEmployee.city],
-              ["Country", viewingEmployee.country],
-              ["Emergency phone", viewingEmployee.emergencyContactPhone],
-            ].map(([label, value]) => (
-              <div key={label as string}>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {label}
-                </p>
-                <p className="mt-1 font-medium text-slate-700">
-                  {value || "—"}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Modal>
-      ) : null}
+      <ViewEmployeeDialog employee={viewingEmployee} onClose={() => setViewingEmployee(null)} />
       {deletingEmployee ? (
         <ConfirmDialog
           title="Delete employee?"

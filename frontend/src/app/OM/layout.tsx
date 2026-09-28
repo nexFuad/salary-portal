@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/Hooks/useAuth";
+import ProtectedDashboard from "@/Components/Shared/ProtectedDashboard";
 
 const links = [
   { href: "/OM/dashboard", label: "Home", icon: Home },
@@ -53,11 +54,15 @@ export default function OmLayout({ children }: { children: ReactNode }) {
   };
   const handleLogout = async () => {
     setMoreOpen(false);
-    await logout();
-    router.replace("/Login?loggedOut=1");
+    try {
+      await logout();
+      router.replace("/Login");
+    } catch {
+      // The shared auth provider displays the logout error.
+    }
   };
   return (
-    <div className="min-h-dvh bg-[#f7f9f9] pb-24 text-[#1f2933]">
+    <ProtectedDashboard role="OM"><div className="min-h-dvh bg-[#f7f9f9] pb-24 text-[#1f2933]">
       {children}
       {moreOpen && (
         <button
@@ -129,6 +134,6 @@ export default function OmLayout({ children }: { children: ReactNode }) {
           </button>
         )}
       </nav>
-    </div>
+    </div></ProtectedDashboard>
   );
 }

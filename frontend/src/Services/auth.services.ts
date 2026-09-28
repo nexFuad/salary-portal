@@ -10,8 +10,14 @@ const authApi = axios.create({
 
 export const authService = {
   async login(payload: LoginPayload) {
-    const response = await authApi.post<AuthResponse>("/login", payload);
-    return response.data.user;
+    await authApi.post<AuthResponse>("/login", payload);
+    // Confirm that the browser received the auth cookies before showing success.
+    try {
+      const session = await authApi.get<AuthResponse>("/me");
+      return session.data.user;
+    } catch {
+      throw new Error("Sign in completed, but the session could not be verified. Please try again.");
+    }
   },
 
   async getCurrentUser() {
